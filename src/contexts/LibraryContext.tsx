@@ -41,6 +41,7 @@ interface LibraryContextValue {
   updateSongMood: (id: string, mood: MoodCategory) => Promise<void>;
   generateLyrics: (id: string) => Promise<void>;
   fetchLyricsSilent: (songId: string, title: string, artist: string) => Promise<void>;
+  fetchCoverArtSilent: (songId: string, title: string, artist: string) => Promise<void>;
 
   // Cover art
   getCoverArtUrl: (songId: string) => Promise<string | null>;
@@ -182,6 +183,17 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
           // Extract metadata
           let title = file.name.replace(/\.[^/.]+$/, '');
           let artist = 'Unknown Artist';
+          
+          // Try to split filename by " - " or " - "
+          const separators = [' - ', ' – ', ' — ', ' -'];
+          for (const sep of separators) {
+            if (title.includes(sep)) {
+              const parts = title.split(sep);
+              artist = parts[0].trim();
+              title = parts.slice(1).join(sep).trim();
+              break;
+            }
+          }
           let album = 'Unknown Album';
           let duration = 0;
           let coverArt: Blob | null = null;
@@ -189,7 +201,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
           try {
             const mm = await import('music-metadata-browser');
             const metadata = await mm.parseBlob(file);
-            if (metadata.common.title) title = metadata.common.title;
+
             if (metadata.common.artist) artist = metadata.common.artist;
             if (metadata.common.album) album = metadata.common.album;
             if (metadata.format.duration) duration = metadata.format.duration;
@@ -229,8 +241,11 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
 
           await db.addSong(song);
 
-          // Auto-fetch lyrics in background
+          // Auto-fetch lyrics and cover art in background
           fetchLyricsSilent(songId, title, artist);
+          if (!coverArt) {
+            fetchCoverArtSilent(songId, title, artist);
+          }
         } catch (err) {
           console.error(`Failed to import ${file.name}:`, err);
         }
@@ -303,12 +318,61 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
         const data = await response.json();
         if (data.lyrics) {
           await db.updateSongLyrics(songId, data.lyrics);
+          
+          // Auto-identify artist/title if they were unknown
+          const song = await db.getSong(songId);
+          if (song && (song.artist === 'Unknown Artist' || song.artist === 'YouTube')) {
+            const updates: any = {};
+            if (data.artist) updates.artist = data.artist;
+            if (data.title && (song.title.toLowerCase().includes('track') || song.title.length < 3)) {
+               updates.title = data.title;
+            }
+            
+            if (Object.keys(updates).length > 0) {
+              await db.updateSongMeta(songId, updates);
+              await refreshSongs();
+              
+              // If metadata improved, try fetching cover art again
+              const currentSong = await db.getSong(songId);
+              if (currentSong && !currentSong.coverArt) {
+                fetchCoverArtSilent(songId, updates.title || song.title, updates.artist || song.artist);
+              }
+            }
+          }
         }
       } catch {
         // Silently ignore — lyrics are optional
       }
     },
-    []
+    [refreshSongs]
+  );
+
+  const fetchCoverArtSilent = useCallback(
+    async (songId: string, title: string, artist: string) => {
+      try {
+        const response = await fetch('/api/cover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, artist }),
+        });
+        
+        if (!response.ok) return;
+        const data = await response.json();
+        
+        if (data.artworkUrl) {
+          const imgRes = await fetch(data.artworkUrl);
+          if (imgRes.ok) {
+            const blob = await imgRes.blob();
+            await db.updateSongMeta(songId, { coverArt: blob } as any);
+            coverArtCache.delete(songId); // Clear cache to force refresh
+            await refreshSongs();
+          }
+        }
+      } catch (err) {
+        console.error('Failed to auto-fetch cover art:', err);
+      }
+    },
+    [refreshSongs, coverArtCache]
   );
 
   const generateLyrics = useCallback(
@@ -459,6 +523,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     updateSongMood,
     generateLyrics,
     fetchLyricsSilent,
+    fetchCoverArtSilent,
     getCoverArtUrl,
     coverArtCache,
     toasts,

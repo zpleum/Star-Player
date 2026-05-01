@@ -3,23 +3,26 @@
 // Star Player — Import Songs Component
 // ============================================================
 import { useLibrary } from '@/contexts/LibraryContext';
+import { useAudioAnalysis } from '@/hooks/useAudioAnalysis';
 import { Upload, FileAudio, Loader2 } from 'lucide-react';
 import { useRef, useState, useCallback } from 'react';
 
 export default function ImportSongs() {
   const { importFiles, importing, importProgress } = useLibrary();
+  const { analyzeAll } = useAudioAnalysis();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    async (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragOver(false);
       if (e.dataTransfer.files.length > 0) {
-        importFiles(e.dataTransfer.files);
+        await importFiles(e.dataTransfer.files);
+        analyzeAll();
       }
     },
-    [importFiles]
+    [importFiles, analyzeAll]
   );
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -29,10 +32,12 @@ export default function ImportSongs() {
 
   const handleDragLeave = () => setIsDragOver(false);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      importFiles(e.target.files);
-      e.target.value = '';
+      const files = e.target.files;
+      await importFiles(files);
+      analyzeAll();
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 

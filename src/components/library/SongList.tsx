@@ -305,7 +305,7 @@ export default function SongList({
       </div>
 
       {/* Song rows */}
-      <div className="overflow-y-auto flex-1 pb-20">
+      <div className="flex flex-col pb-10">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

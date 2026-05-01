@@ -245,7 +245,7 @@ export default function SongGrid({ songs, emptyMessage = 'No songs yet', onReord
   };
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 p-6 content-start">
         <DndContext
           sensors={sensors}

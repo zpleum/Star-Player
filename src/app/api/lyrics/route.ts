@@ -104,7 +104,12 @@ export async function POST(req: Request) {
     if (target.syncedLyrics) {
       const segments = parseLrcToSegments(target.syncedLyrics);
       if (segments.length > 0) {
-        return NextResponse.json({ lyrics: segments, source: 'synced' });
+        return NextResponse.json({ 
+          lyrics: segments, 
+          source: 'synced',
+          artist: target.artistName,
+          title: target.trackName 
+        });
       }
     }
 
@@ -121,7 +126,12 @@ export async function POST(req: Request) {
         text,
       }));
 
-      return NextResponse.json({ lyrics: segments, source: 'plain' });
+      return NextResponse.json({ 
+        lyrics: segments, 
+        source: 'plain',
+        artist: target.artistName,
+        title: target.trackName
+      });
     }
 
     return NextResponse.json(

@@ -106,24 +106,35 @@ export default function Home() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden flex flex-col px-8 pb-4">
+      <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
         {songs.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center max-w-lg mx-auto w-full">
+          <div className="min-h-[60vh] flex flex-col items-center justify-center max-w-lg mx-auto w-full">
             <ImportSongs />
           </div>
         ) : (
-          <div className="flex-1 overflow-hidden bg-surface/30 rounded-2xl border border-border/50 flex flex-col">
-            {viewMode === 'list' ? (
-              <SongList 
-                songs={filteredSongs} 
-                onReorder={(!searchQuery && !moodFilter) ? reorderLibrarySongs : undefined} 
-              />
-            ) : (
-              <SongGrid 
-                songs={filteredSongs} 
-                onReorder={(!searchQuery && !moodFilter) ? reorderLibrarySongs : undefined} 
-              />
-            )}
+          <div className="flex flex-col gap-10">
+            <div className="bg-surface/30 rounded-2xl border border-border/50 flex flex-col overflow-hidden">
+              {viewMode === 'list' ? (
+                <SongList 
+                  songs={filteredSongs} 
+                  onReorder={(!searchQuery && !moodFilter) ? reorderLibrarySongs : undefined} 
+                />
+              ) : (
+                <SongGrid 
+                  songs={filteredSongs} 
+                  onReorder={(!searchQuery && !moodFilter) ? reorderLibrarySongs : undefined} 
+                />
+              )}
+            </div>
+            
+            {/* Persistent Upload Zone at bottom */}
+            <div className="max-w-4xl mx-auto w-full pt-4 pb-20">
+              <div className="text-center mb-6">
+                <h3 className="text-lg font-semibold text-text-primary mb-1">Add more music</h3>
+                <p className="text-sm text-text-muted">Drop files here to expand your library</p>
+              </div>
+              <ImportSongs />
+            </div>
           </div>
         )}
       </div>

@@ -29,10 +29,10 @@
 - Beautiful fade-in/fade-out edges using CSS masking
 - Lyrics cached in IndexedDB for instant loading
 
-### 🧠 AI Mood Classification
-- Automatic **mood analysis** (Party, Sad, Focus, Chill, Workout) using OpenAI
+### 🧠 Mood Classification
+- Automatic **mood analysis** (Party, Sad, Focus, Chill, Workout) using rule-based fuzzy scoring
 - BPM detection via Web Audio beat detection
-- Audio feature extraction (spectral centroid, energy, etc.)
+- Audio feature extraction (spectral centroid, energy, ZCR, spectral flatness)
 - Browse songs by mood with dedicated mood pages
 
 ### 📋 Library Management
@@ -82,14 +82,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Environment Variables
 
-Create a `.env.local` file for optional features:
-
-```env
-# Required for AI Mood Classification
-OPENAI_API_KEY=your_openai_api_key_here
-```
-
-> **Note:** The player works fully without an API key. Mood classification is the only feature that requires OpenAI.
+No environment variables are required. The player works fully offline out of the box.
 
 ---
 
@@ -106,7 +99,6 @@ OPENAI_API_KEY=your_openai_api_key_here
 | **Drag & Drop** | `@dnd-kit` |
 | **Icons** | Lucide React |
 | **YouTube** | `yt-dlp` via `youtube-dl-exec` |
-| **AI** | OpenAI API |
 
 ---
 
@@ -152,9 +144,9 @@ src/
 4. Smooth scrolling is achieved via CSS `translateY` transitions
 
 ### Mood Classification
-1. Audio features are extracted using Meyda (spectral centroid, RMS energy, etc.)
+1. Audio features are extracted using Meyda (spectral centroid, RMS energy, ZCR, spectral flatness)
 2. BPM is detected using `web-audio-beat-detector`
-3. Features are sent to OpenAI for mood classification
+3. A rule-based fuzzy scoring algorithm classifies the mood based on feature ranges
 4. Results are cached in IndexedDB per song
 
 ---

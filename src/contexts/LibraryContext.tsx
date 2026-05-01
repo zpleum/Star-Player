@@ -40,6 +40,7 @@ interface LibraryContextValue {
   toggleFavorite: (id: string) => Promise<void>;
   updateSongMood: (id: string, mood: MoodCategory) => Promise<void>;
   generateLyrics: (id: string) => Promise<void>;
+  fetchLyricsSilent: (songId: string, title: string, artist: string) => Promise<void>;
 
   // Cover art
   getCoverArtUrl: (songId: string) => Promise<string | null>;
@@ -205,8 +206,9 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
             duration = await getAudioDuration(audioBlob);
           }
 
+          const songId = uuidv4();
           const song = {
-            id: uuidv4(),
+            id: songId,
             title,
             artist,
             album,
@@ -226,6 +228,9 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
           };
 
           await db.addSong(song);
+
+          // Auto-fetch lyrics in background
+          fetchLyricsSilent(songId, title, artist);
         } catch (err) {
           console.error(`Failed to import ${file.name}:`, err);
         }
@@ -283,6 +288,27 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       await refreshSongs();
     },
     [refreshSongs]
+  );
+
+  // Silent lyrics fetcher — no toasts, used for auto-fetch after import/download
+  const fetchLyricsSilent = useCallback(
+    async (songId: string, title: string, artist: string) => {
+      try {
+        const response = await fetch('/api/lyrics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, artist }),
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.lyrics) {
+          await db.updateSongLyrics(songId, data.lyrics);
+        }
+      } catch {
+        // Silently ignore — lyrics are optional
+      }
+    },
+    []
   );
 
   const generateLyrics = useCallback(
@@ -432,6 +458,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     toggleFavorite: toggleFavoriteFn,
     updateSongMood,
     generateLyrics,
+    fetchLyricsSilent,
     getCoverArtUrl,
     coverArtCache,
     toasts,

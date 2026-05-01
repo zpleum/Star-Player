@@ -148,7 +148,7 @@ export default function LyricsView({
           className="relative flex flex-col items-center text-center gap-8 px-6 transition-transform duration-[800ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]"
           style={{ transform: `translateY(${translateY}px)` }}
         >
-          {lyrics!.map((line, i) => {
+          {lyrics && lyrics.map((line, i) => {
             const isActive = i === activeIndex;
 
             return (

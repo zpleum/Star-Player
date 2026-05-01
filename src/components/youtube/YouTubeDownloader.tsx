@@ -45,7 +45,7 @@ export default function YouTubeDownloader() {
   const [isBatchDownloading, setIsBatchDownloading] = useState(false);
   const abortRef = useRef(false);
 
-  const { refreshSongs, showToast, songs, deleteSong } = useLibrary();
+  const { refreshSongs, showToast, songs, deleteSong, fetchLyricsSilent } = useLibrary();
   const { analyzeAll } = useAudioAnalysis();
 
   // ── Single Mode Functions ──────────────────────────
@@ -162,6 +162,9 @@ export default function YouTubeDownloader() {
         analyzed: false,
       });
 
+      // Auto-fetch lyrics in background
+      fetchLyricsSilent(songId, videoInfo.title, 'YouTube');
+
       await refreshSongs();
       showToast('success', 'Song downloaded successfully');
       setSuccess(true);
@@ -247,8 +250,9 @@ export default function YouTubeDownloader() {
         if (thumbRes.ok) coverArt = await thumbRes.blob();
       } catch (e) {}
 
+      const songId = uuidv4();
       await addSong({
-        id: uuidv4(),
+        id: songId,
         title: info.title,
         artist: 'YouTube',
         album: 'YouTube Downloads',
@@ -266,6 +270,9 @@ export default function YouTubeDownloader() {
         audioFeatures: null,
         analyzed: false,
       });
+
+      // Auto-fetch lyrics in background
+      fetchLyricsSilent(songId, info.title, 'YouTube');
 
       return true;
     } catch {

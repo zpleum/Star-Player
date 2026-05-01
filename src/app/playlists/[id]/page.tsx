@@ -4,8 +4,9 @@ import { usePlayer } from '@/contexts/PlayerContext';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import SongList from '@/components/library/SongList';
+import SongGrid from '@/components/library/SongGrid';
 import AddSongsModal from '@/components/library/AddSongsModal';
-import { ChevronLeft, Play, Shuffle, Trash2, Plus, Music2 } from 'lucide-react';
+import { ChevronLeft, Play, Shuffle, Trash2, Plus, Music2, LayoutGrid, List } from 'lucide-react';
 
 export default function PlaylistDetailPage() {
   const params = useParams();
@@ -15,6 +16,7 @@ export default function PlaylistDetailPage() {
   const [mounted, setMounted] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   const playlistId = params.id as string;
   const playlist = playlists.find((p) => p.id === playlistId);
@@ -30,6 +32,24 @@ export default function PlaylistDetailPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Load viewMode from settings
+  useEffect(() => {
+    import('@/lib/db').then(db => {
+      db.getSettings().then(settings => {
+        if (settings.viewMode) setViewMode(settings.viewMode);
+      });
+    });
+  }, []);
+
+  const handleSetViewMode = (mode: 'list' | 'grid') => {
+    setViewMode(mode);
+    import('@/lib/db').then(db => {
+      db.getSettings().then(settings => {
+        db.saveSettings({ ...settings, viewMode: mode });
+      });
+    });
+  };
 
   // Load cover art from first song
   useEffect(() => {
@@ -115,6 +135,25 @@ export default function PlaylistDetailPage() {
             >
               <Shuffle className="w-5 h-5" />
             </button>
+
+            {/* View Toggle */}
+            <div className="flex items-center bg-surface border border-border rounded-full p-1">
+              <button
+                onClick={() => handleSetViewMode('list')}
+                className={`p-1.5 rounded-full transition-colors ${viewMode === 'list' ? 'bg-background shadow-sm text-text-primary' : 'text-text-muted hover:text-text-primary'}`}
+                title="List View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleSetViewMode('grid')}
+                className={`p-1.5 rounded-full transition-colors ${viewMode === 'grid' ? 'bg-background shadow-sm text-text-primary' : 'text-text-muted hover:text-text-primary'}`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
+
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="flex items-center gap-2 px-5 py-3 bg-surface border border-border hover:bg-surface-hover text-text-primary rounded-full font-medium transition-colors"
@@ -133,14 +172,22 @@ export default function PlaylistDetailPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col px-8 pb-4 relative z-10">
-        <div className="flex-1 overflow-hidden bg-surface/30 rounded-2xl border border-border/50 flex flex-col">
-          <SongList
-            songs={playlistSongs}
-            emptyMessage="This playlist is empty. Add songs from your library."
-            playlistId={playlist.id}
-            onReorder={(start, end) => reorderPlaylistSongs(playlist.id, start, end)}
-          />
+      <div className="flex-1 overflow-y-auto px-8 pb-8 relative z-10 custom-scrollbar">
+        <div className="bg-surface/30 rounded-2xl border border-border/50 flex flex-col overflow-hidden min-h-[400px]">
+          {viewMode === 'list' ? (
+            <SongList
+              songs={playlistSongs}
+              emptyMessage="This playlist is empty. Add songs from your library."
+              playlistId={playlist.id}
+              onReorder={(start, end) => reorderPlaylistSongs(playlist.id, start, end)}
+            />
+          ) : (
+            <SongGrid
+              songs={playlistSongs}
+              emptyMessage="This playlist is empty. Add songs from your library."
+              onReorder={(start, end) => reorderPlaylistSongs(playlist.id, start, end)}
+            />
+          )}
         </div>
       </div>
 

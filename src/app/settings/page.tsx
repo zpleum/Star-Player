@@ -4,11 +4,13 @@ import { useAudioAnalysis } from '@/hooks/useAudioAnalysis';
 import * as db from '@/lib/db';
 import { Settings as SettingsIcon, Brain, HardDrive, Trash2, Database, AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function SettingsPage() {
   const { songs, refreshSongs, showToast } = useLibrary();
   const { analyzeAll } = useAudioAnalysis();
   const [storage, setStorage] = useState<{ usage: number; quota: number }>({ usage: 0, quota: 0 });
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   useEffect(() => {
     db.getStorageEstimate().then(setStorage);
@@ -23,12 +25,10 @@ export default function SettingsPage() {
   };
 
   const handleClearData = async () => {
-    if (confirm('Are you sure you want to delete all songs, playlists, and settings? This cannot be undone.')) {
-      await db.clearAllData();
-      await refreshSongs();
-      showToast('success', 'All data cleared successfully');
-      window.location.reload();
-    }
+    await db.clearAllData();
+    await refreshSongs();
+    showToast('success', 'All data cleared successfully');
+    window.location.reload();
   };
 
   const analyzedCount = songs.filter((s) => s.analyzed).length;
@@ -112,7 +112,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-red-400/70">Deletes all songs, playlists, and settings from IndexedDB.</p>
               </div>
               <button
-                onClick={handleClearData}
+                onClick={() => setIsConfirmOpen(true)}
                 className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors text-sm font-medium flex items-center gap-2"
               >
                 <Trash2 className="w-4 h-4" />
@@ -122,6 +122,16 @@ export default function SettingsPage() {
           </section>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        title="Clear All Data"
+        message="Are you sure you want to delete all songs, playlists, and settings? This cannot be undone."
+        confirmLabel="Clear Everything"
+        isDestructive={true}
+        onConfirm={handleClearData}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </div>
   );
 }

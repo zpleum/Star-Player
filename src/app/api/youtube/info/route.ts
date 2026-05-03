@@ -2,9 +2,8 @@ import { NextResponse } from 'next/server';
 import { create } from 'youtube-dl-exec';
 import path from 'path';
 
-// Resolve the binary path correctly for both Windows and Linux
-const isWin = process.platform === 'win32';
-const ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', isWin ? 'yt-dlp.exe' : 'yt-dlp');
+// Resolve the binary path correctly in Next.js
+const ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
 const youtubedl = create(ytDlpPath);
 
 export async function GET(request: Request) {

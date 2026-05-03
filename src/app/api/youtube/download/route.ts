@@ -6,9 +6,8 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 
-// Resolve the binary path correctly for both Windows and Linux
-const isWin = process.platform === 'win32';
-const ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', isWin ? 'yt-dlp.exe' : 'yt-dlp');
+// Resolve the binary path correctly in Next.js
+const ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
 const youtubedl = create(ytDlpPath);
 
 const execAsync = promisify(exec);
@@ -29,39 +28,14 @@ export async function POST(request: Request) {
     if (!fs.existsSync(ffmpegDir)) {
       fs.mkdirSync(ffmpegDir, { recursive: true });
     }
-    const ffmpegBin = isWin ? 'ffmpeg.exe' : 'ffmpeg';
-    const ffprobeBin = isWin ? 'ffprobe.exe' : 'ffprobe';
-
-    const destFfmpeg = path.join(ffmpegDir, ffmpegBin);
-    const destFfprobe = path.join(ffmpegDir, ffprobeBin);
+    const destFfmpeg = path.join(ffmpegDir, 'ffmpeg.exe');
+    const destFfprobe = path.join(ffmpegDir, 'ffprobe.exe');
     
-    const ffmpegPath = path.join(process.cwd(), 'node_modules', 'ffmpeg-static', ffmpegBin);
+    const ffmpegPath = path.join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg.exe');
+    const ffprobePath = path.join(process.cwd(), 'node_modules', 'ffprobe-static', 'bin', 'win32', 'x64', 'ffprobe.exe');
     
-    let ffprobePath = '';
-    if (isWin) {
-      ffprobePath = path.join(process.cwd(), 'node_modules', 'ffprobe-static', 'bin', 'win32', 'x64', 'ffprobe.exe');
-    } else {
-      // For Linux/macOS, ffprobe-static usually puts it in the root of the package or a 'bin' folder
-      ffprobePath = path.join(process.cwd(), 'node_modules', 'ffprobe-static', ffprobeBin);
-      // Fallback check
-      if (!fs.existsSync(ffprobePath)) {
-        ffprobePath = path.join(process.cwd(), 'node_modules', 'ffprobe-static', 'bin', process.platform, process.arch, ffprobeBin);
-      }
-    }
-    
-    if (fs.existsSync(ffmpegPath) && !fs.existsSync(destFfmpeg)) fs.copyFileSync(ffmpegPath, destFfmpeg);
-    if (fs.existsSync(ffprobePath) && !fs.existsSync(destFfprobe)) fs.copyFileSync(ffprobePath, destFfprobe);
-
-    // Set permissions for Linux
-    if (!isWin) {
-      try {
-        if (fs.existsSync(destFfmpeg)) fs.chmodSync(destFfmpeg, '755');
-        if (fs.existsSync(destFfprobe)) fs.chmodSync(destFfprobe, '755');
-        if (fs.existsSync(ytDlpPath)) fs.chmodSync(ytDlpPath, '755');
-      } catch (e) {
-        console.warn('Failed to set executable permissions:', e);
-      }
-    }
+    if (!fs.existsSync(destFfmpeg)) fs.copyFileSync(ffmpegPath, destFfmpeg);
+    if (!fs.existsSync(destFfprobe)) fs.copyFileSync(ffprobePath, destFfprobe);
 
     // Use yt-dlp to download and extract audio
     const ytOptions = {

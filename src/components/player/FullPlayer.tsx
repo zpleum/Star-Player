@@ -172,7 +172,7 @@ export default function FullPlayer() {
 
       {/* Equalizer Sidebar */}
       <div 
-        className={`absolute top-0 right-0 bottom-0 w-full md:w-[420px] bg-background/60 backdrop-blur-3xl border-l border-white/5 z-50 transform transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] flex flex-col p-6 shadow-2xl ${
+        className={`absolute top-0 right-0 bottom-0 w-full md:w-[420px] bg-background/60 backdrop-blur-3xl border-l border-white/5 z-50 transform transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] flex flex-col p-6 ${
           isEqOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
@@ -209,7 +209,7 @@ export default function FullPlayer() {
           {/* Left Side: Original Player UI */}
           <div className={`flex flex-col items-center justify-center gap-6 transition-all duration-500 ${isLyricsOpen ? 'w-full md:w-1/2 flex-shrink-0' : 'w-full'}`}>
             <div className="relative group">
-              <div className={`transition-all duration-500 ${isLyricsOpen ? 'w-64 h-64 md:w-80 md:h-80' : 'w-72 h-72 md:w-80 md:h-80'} rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] ring-1 ring-white/5`}>
+              <div className={`transition-all duration-500 ${isLyricsOpen ? 'w-64 h-64 md:w-80 md:h-80' : 'w-72 h-72 md:w-80 md:h-80'} rounded-3xl overflow-hidden ring-1 ring-white/5`}>
                 {coverUrl ? (
                   <img src={coverUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 ) : (
@@ -289,12 +289,12 @@ export default function FullPlayer() {
                 >
                   {/* Filled track */}
                   <div
-                    className={`absolute inset-y-0 left-0 bg-gradient-to-r from-accent via-purple-400 to-pink-500 rounded-full ${isSeeking ? '' : 'transition-[width] duration-100'}`}
+                    className={`absolute inset-y-0 left-0 bg-gradient-to-r from-accent via-accent-2 to-accent-3 rounded-full ${isSeeking ? '' : 'transition-[width] duration-100'}`}
                     style={{ width: `${progress}%` }}
                   />
                   {/* Thumb */}
                   <div
-                    className={`absolute top-1/2 w-4 h-4 rounded-full bg-white shadow-[0_0_10px_rgba(139,92,246,0.6)] transition-opacity ${isSeeking ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                    className="absolute top-1/2 w-4 h-4 rounded-full bg-white opacity-100"
                     style={{ left: `${progress}%`, transform: 'translate(-50%, -50%)' }}
                   />
                 </div>
@@ -308,7 +308,7 @@ export default function FullPlayer() {
               <div className="flex items-center gap-6">
                 <button
                   onClick={toggleShuffle}
-                  className={`p-2 rounded-xl transition-all duration-200 ${isShuffled ? 'text-accent bg-accent/10 drop-shadow-[0_0_6px_rgba(139,92,246,0.5)]' : 'text-text-muted hover:text-text-primary'}`}
+                  className={`p-2 rounded-xl transition-all duration-200 ${isShuffled ? 'text-accent bg-accent/10' : 'text-text-muted hover:text-text-primary'}`}
                 >
                   <Shuffle className="w-5 h-5" />
                 </button>
@@ -317,7 +317,7 @@ export default function FullPlayer() {
                 </button>
                 <button
                   onClick={togglePlay}
-                  className="p-5 rounded-full bg-gradient-to-br from-accent to-purple-600 hover:from-accent-hover hover:to-purple-500 text-white shadow-[0_0_36px_rgba(139,92,246,0.5)] hover:shadow-[0_0_50px_rgba(139,92,246,0.7)] transition-all active:scale-95"
+                  className="p-5 rounded-full bg-accent hover:bg-accent-hover text-white transition-all active:scale-95"
                 >
                   {isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-0.5" />}
                 </button>
@@ -326,7 +326,7 @@ export default function FullPlayer() {
                 </button>
                 <button
                   onClick={cycleRepeat}
-                  className={`p-2 rounded-xl transition-all duration-200 ${repeatMode !== 'off' ? 'text-accent bg-accent/10 drop-shadow-[0_0_6px_rgba(139,92,246,0.5)]' : 'text-text-muted hover:text-text-primary'}`}
+                  className={`p-2 rounded-xl transition-all duration-200 ${repeatMode !== 'off' ? 'text-accent bg-accent/10' : 'text-text-muted hover:text-text-primary'}`}
                 >
                   <RepeatIcon className="w-5 h-5" />
                 </button>

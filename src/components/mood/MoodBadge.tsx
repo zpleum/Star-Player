@@ -57,7 +57,7 @@ export default function MoodBadge({ songId, mood, confidence, bpm, className = '
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-1 left-0 z-50 w-48 py-1 rounded-xl glass-strong shadow-xl border border-border animate-fade-in text-left">
+        <div className="absolute top-full mt-1 left-0 z-50 w-48 py-1 rounded-xl glass-strong border border-border animate-fade-in text-left">
           <div className="px-3 py-2 border-b border-border mb-1">
             <p className="text-xs text-text-muted font-semibold uppercase tracking-wider">Override Mood</p>
           </div>

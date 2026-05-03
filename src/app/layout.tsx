@@ -7,6 +7,11 @@ import Sidebar from '@/components/layout/Sidebar';
 import BottomPlayer from '@/components/player/BottomPlayer';
 import FullPlayer from '@/components/player/FullPlayer';
 import ToastContainer from '@/components/ui/Toast';
+import GlobalContextMenu from '@/components/ui/GlobalContextMenu';
+import PlaylistContextMenu from '@/components/ui/PlaylistContextMenu';
+import GlobalErrorModal from '@/components/ui/GlobalErrorModal';
+import AmbientBackground from '@/components/layout/ambient-background';
+import CreatePlaylistModalWrapper from '@/components/library/CreatePlaylistModalWrapper';
 
 const spaceGrotesk = Space_Grotesk({
   variable: '--font-space-grotesk',
@@ -32,13 +37,12 @@ export default function RootLayout({
       <body className="h-full flex flex-col overflow-hidden bg-background text-foreground">
         <LibraryProvider>
           <PlayerProvider>
+            <AmbientBackground />
+            <CreatePlaylistModalWrapper />
+            <GlobalContextMenu />
+            <PlaylistContextMenu />
             {/* Main App Layout */}
             <div className="flex-1 flex overflow-hidden relative">
-              {/* Ambient background orbs */}
-              <div className="ambient-orb ambient-orb-1" />
-              <div className="ambient-orb ambient-orb-2" />
-              <div className="ambient-orb ambient-orb-3" />
-
               <Sidebar />
               <main className="flex-1 overflow-hidden relative flex flex-col">
                 {children}
@@ -53,6 +57,9 @@ export default function RootLayout({
             
             {/* Global Toasts */}
             <ToastContainer />
+
+            {/* Global Error Modals */}
+            <GlobalErrorModal />
           </PlayerProvider>
         </LibraryProvider>
       </body>

@@ -105,7 +105,6 @@ export default function LyricsView({
               className="group relative flex items-center gap-3 px-8 py-4 rounded-2xl font-semibold text-white overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95"
               style={{
                 background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
-                boxShadow: '0 0 40px rgba(139,92,246,0.4)',
               }}
             >
               {/* Shimmer effect */}

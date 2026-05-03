@@ -10,6 +10,25 @@
   unicode-range: U+0E00-0E7F, U+200C-200D, U+25CC;
 }
 
+@property --accent { syntax: '<color>'; initial-value: #8b5cf6; inherits: true; }
+@property --accent-2 { syntax: '<color>'; initial-value: #ec4899; inherits: true; }
+@property --accent-3 { syntax: '<color>'; initial-value: #6366f1; inherits: true; }
+@property --accent-4 { syntax: '<color>'; initial-value: #10b981; inherits: true; }
+@property --accent-5 { syntax: '<color>'; initial-value: #f59e0b; inherits: true; }
+@property --background { syntax: '<color>'; initial-value: #050509; inherits: true; }
+@property --surface { syntax: '<color>'; initial-value: #0c0c18; inherits: true; }
+
+@property --accent-pos-1-x { syntax: '<percentage>'; initial-value: 0%; inherits: true; }
+@property --accent-pos-1-y { syntax: '<percentage>'; initial-value: 0%; inherits: true; }
+@property --accent-pos-2-x { syntax: '<percentage>'; initial-value: 100%; inherits: true; }
+@property --accent-pos-2-y { syntax: '<percentage>'; initial-value: 0%; inherits: true; }
+@property --accent-pos-3-x { syntax: '<percentage>'; initial-value: 50%; inherits: true; }
+@property --accent-pos-3-y { syntax: '<percentage>'; initial-value: 100%; inherits: true; }
+@property --accent-pos-4-x { syntax: '<percentage>'; initial-value: 100%; inherits: true; }
+@property --accent-pos-4-y { syntax: '<percentage>'; initial-value: 100%; inherits: true; }
+@property --accent-pos-5-x { syntax: '<percentage>'; initial-value: 50%; inherits: true; }
+@property --accent-pos-5-y { syntax: '<percentage>'; initial-value: 0%; inherits: true; }
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -18,6 +37,7 @@
   --color-border: var(--border-color);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
@@ -32,10 +52,11 @@
 
   --animate-fade-in: fade-in 0.3s ease-out;
   --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-slide-down: slide-down 0.3s ease-out;
   --animate-spin-slow: spin 8s linear infinite;
   --animate-eq-bar: eq-bar 0.5s ease-in-out infinite alternate;
-  --animate-float: float 6s ease-in-out infinite;
   --animate-shimmer: shimmer 2s linear infinite;
+  --animate-shrink: shrink var(--toast-duration, 3s) linear forwards;
 }
 
 :root {
@@ -46,9 +67,29 @@
   --border-color: #1c1c3a;
   --accent: #8b5cf6;
   --accent-hover: #a78bfa;
+  --accent-foreground: #ffffff;
   --text-primary: #f0f2f8;
   --text-secondary: #b0b8cc;
   --text-muted: #5c6480;
+
+  transition: 
+    --accent 1.2s ease-in-out,
+    --accent-2 1.2s ease-in-out,
+    --accent-3 1.2s ease-in-out,
+    --accent-4 1.2s ease-in-out,
+    --accent-5 1.2s ease-in-out,
+    --background 1.2s ease-in-out,
+    --surface 1.2s ease-in-out,
+    --accent-pos-1-x 1.5s ease-in-out,
+    --accent-pos-1-y 1.5s ease-in-out,
+    --accent-pos-2-x 1.5s ease-in-out,
+    --accent-pos-2-y 1.5s ease-in-out,
+    --accent-pos-3-x 1.5s ease-in-out,
+    --accent-pos-3-y 1.5s ease-in-out,
+    --accent-pos-4-x 1.5s ease-in-out,
+    --accent-pos-4-y 1.5s ease-in-out,
+    --accent-pos-5-x 1.5s ease-in-out,
+    --accent-pos-5-y 1.5s ease-in-out;
 }
 
 /* ---- Animations ---- */
@@ -60,6 +101,16 @@
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shrink {
+  from { width: 100%; }
+  to { width: 0%; }
 }
 
 @keyframes glow-pulse {
@@ -111,25 +162,33 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.15);
+  background: rgba(var(--accent-rgb), 0.2);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.35);
+  background: rgba(var(--accent-rgb), 0.4);
 }
 
 /* ---- Glass Effect ---- */
 .glass {
-  background: rgba(12, 12, 24, 0.65);
+  background: rgba(var(--surface-rgb), 0.7);
   backdrop-filter: blur(20px) saturate(1.2);
-  border: 1px solid rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.1);
 }
 
 .glass-strong {
-  background: rgba(12, 12, 24, 0.88);
-  backdrop-filter: blur(32px) saturate(1.3);
-  border: 1px solid rgba(139, 92, 246, 0.1);
+  background: rgb(0, 0, 0);
+  backdrop-filter: blur(40px) saturate(1.5);
+  transition: background 1s ease;
+}
+
+[data-dynamic-bg="true"] .glass-strong {
+  background: rgba(var(--surface-rgb), 0.35);
+}
+
+[data-dynamic-bg="false"] .glass-strong {
+  background: rgba(4, 4, 8, 0.45);
 }
 
 /* ---- Custom Range/Slider ---- */
@@ -142,7 +201,7 @@ input[type="range"] {
 
 input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
-  background: rgba(139, 92, 246, 0.15);
+  background: rgba(var(--accent-rgb), 0.15);
   border-radius: 4px;
 }
 
@@ -152,20 +211,19 @@ input[type="range"]::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #ec4899);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   margin-top: -5px;
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5), 0 0 3px rgba(236, 72, 153, 0.3);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
   transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 input[type="range"]:hover::-webkit-slider-thumb {
   transform: scale(1.25);
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.7), 0 0 6px rgba(236, 72, 153, 0.5);
 }
 
 input[type="range"]::-moz-range-track {
   height: 4px;
-  background: rgba(139, 92, 246, 0.15);
+  background: rgba(var(--accent-rgb), 0.15);
   border-radius: 4px;
 }
 
@@ -173,9 +231,9 @@ input[type="range"]::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #ec4899);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border: none;
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5), 0 0 3px rgba(236, 72, 153, 0.3);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
 }
 
 /* ---- Mood Gradients ---- */
@@ -189,43 +247,6 @@ input[type="range"]::-moz-range-thumb {
 .drop-zone-active {
   border-color: var(--accent) !important;
   background: rgba(139, 92, 246, 0.1) !important;
-}
-
-/* ---- Ambient Background Orbs ---- */
-.ambient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.12;
-  pointer-events: none;
-  animation: float 8s ease-in-out infinite;
-}
-
-.ambient-orb-1 {
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
-  top: -100px;
-  left: -100px;
-  animation-delay: 0s;
-}
-
-.ambient-orb-2 {
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, #ec4899 0%, transparent 70%);
-  bottom: -80px;
-  right: -80px;
-  animation-delay: -3s;
-}
-
-.ambient-orb-3 {
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, #6366f1 0%, transparent 70%);
-  top: 40%;
-  right: 20%;
-  animation-delay: -5s;
 }
 
 /* ---- Selection ---- */

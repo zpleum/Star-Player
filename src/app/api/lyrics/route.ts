@@ -55,11 +55,26 @@ async function searchLrcLib(query: string): Promise<LrcLibResponse[]> {
 }
 
 function cleanTitle(title: string) {
+  // Remove common radio station prefixes (e.g., "Radio 1.920 MHz ◡̈ ")
+  // Match "Radio", then frequencies, then "MHz", then any emojis/icons, then whitespace
+  let cleaned = title.replace(/^Radio\s+[\d.]+\s+MHz\s+[^\s]+\s+/i, '');
+  
+  // If the above didn't catch it, try a more broad prefix removal
+  if (cleaned === title && title.toLowerCase().startsWith('radio ')) {
+    const parts = title.split('◡̈');
+    if (parts.length > 1) {
+      cleaned = parts.slice(1).join('◡̈').trim();
+    }
+  }
+
   // Remove common suffixes: (feat. ...), [Official MV], etc.
-  return title
+  return cleaned
     .replace(/\s*[\[(].*?[\])]/g, '')
     .replace(/\s*ft\.?.*/i, '')
     .replace(/\s*feat\.?.*/i, '')
+    .replace(/\s*official\s*video.*/i, '')
+    .replace(/\s*mv$/i, '')
+    .replace(/\s*lyric\s*video.*/i, '')
     .trim();
 }
 
@@ -73,12 +88,13 @@ export async function POST(req: Request) {
     }
 
     const cleanedTitle = cleanTitle(title);
+    const cleanedArtist = artist?.toLowerCase() === 'youtube' ? '' : artist;
 
     // Try multiple search strategies in order
     const strategies = [
-      `${cleanedTitle} ${artist}`,
+      cleanedArtist ? `${cleanedTitle} ${cleanedArtist}` : cleanedTitle,
       cleanedTitle,
-      `${title} ${artist}`,
+      cleanedArtist ? `${title} ${cleanedArtist}` : title,
       title,
     ].filter(Boolean);
 

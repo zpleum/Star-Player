@@ -197,11 +197,12 @@ export async function deletePlaylist(id: string): Promise<void> {
 export async function getSettings(): Promise<AppSettings> {
   const db = await getDB();
   const settings = await db.get('settings', 'app');
+  const { DEFAULT_SETTINGS } = await import('./types');
+  
   if (!settings) {
-    const { DEFAULT_SETTINGS } = await import('./types');
     return { ...DEFAULT_SETTINGS };
   }
-  return settings;
+  return { ...DEFAULT_SETTINGS, ...settings };
 }
 
 export async function saveSettings(settings: AppSettings): Promise<void> {
@@ -229,6 +230,7 @@ function songToMeta(song: Song): SongMeta {
     analyzed: song.analyzed,
     hasCoverArt: song.coverArt !== null,
     hasLyrics: !!song.lyrics && song.lyrics.length > 0,
+    source: song.source,
   };
 }
 
@@ -238,6 +240,19 @@ export async function getStorageEstimate(): Promise<{ usage: number; quota: numb
     return { usage: estimate.usage || 0, quota: estimate.quota || 0 };
   }
   return { usage: 0, quota: 0 };
+}
+
+export async function getSongsWithSizes(): Promise<{ id: string; title: string; artist: string; size: number; analyzed: boolean; source?: 'upload' | 'youtube' }[]> {
+  const db = await getDB();
+  const songs = await db.getAll('songs');
+  return songs.map((s) => ({
+    id: s.id,
+    title: s.title,
+    artist: s.artist,
+    size: s.audioData.size + (s.coverArt?.size || 0),
+    analyzed: s.analyzed,
+    source: s.source,
+  }));
 }
 
 export async function clearAllData(): Promise<void> {

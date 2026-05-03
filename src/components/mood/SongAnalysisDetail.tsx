@@ -78,7 +78,7 @@ export default function SongAnalysisDetail({ songId, onClose }: SongAnalysisDeta
 
   if (loading) {
     return (
-      <div className="bg-surface/90 backdrop-blur-3xl rounded-3xl border border-border shadow-2xl p-12 w-full max-w-md mx-auto flex items-center justify-center">
+      <div className="bg-surface/90 backdrop-blur-3xl rounded-3xl border border-border p-12 w-full max-w-md mx-auto flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-accent animate-spin" />
       </div>
     );
@@ -89,7 +89,7 @@ export default function SongAnalysisDetail({ songId, onClose }: SongAnalysisDeta
   const moodConfig = song.mood ? MOOD_CONFIG[song.mood] : null;
 
   return (
-    <div className="bg-surface/95 backdrop-blur-3xl rounded-3xl border border-border shadow-2xl p-6 w-full max-w-md mx-auto flex flex-col gap-6 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="bg-surface/95 backdrop-blur-3xl rounded-3xl border border-border p-6 w-full max-w-md mx-auto flex flex-col gap-6 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
       {/* Background glow based on mood */}
       {moodConfig && (
         <div 
@@ -229,7 +229,7 @@ export default function SongAnalysisDetail({ songId, onClose }: SongAnalysisDeta
               {isDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
-                  <div className="absolute bottom-full left-0 right-0 mb-2 bg-background border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="absolute bottom-full left-0 right-0 mb-2 bg-background border border-border rounded-xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
                     {ALL_MOODS.map((m) => {
                       const cfg = MOOD_CONFIG[m];
                       return (

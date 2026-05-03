@@ -15,7 +15,7 @@ export default function AnalysisProgress({ state, onCancel }: AnalysisProgressPr
 
   return (
     <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
-      <div className="glass-strong border border-accent/30 rounded-2xl p-4 shadow-[0_10px_40px_rgba(139,92,246,0.2)] flex items-center gap-4 min-w-[320px]">
+      <div className="glass-strong border border-accent/30 rounded-2xl p-4 flex items-center gap-4 min-w-[320px]">
         
         <div className="relative flex items-center justify-center w-12 h-12">
           <svg className="absolute inset-0 w-full h-full -rotate-90">

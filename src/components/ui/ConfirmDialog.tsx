@@ -8,6 +8,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   isDestructive?: boolean;
+  verificationChallenge?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -19,10 +20,21 @@ export default function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   isDestructive = false,
+  verificationChallenge,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  // Remove early return to allow exit animations
+  const [verifyInput, setVerifyInput] = React.useState('');
+
+  // Reset input when dialog opens/closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      setVerifyInput('');
+    }
+  }, [isOpen]);
+
+  const isConfirmDisabled = verificationChallenge ? verifyInput !== verificationChallenge : false;
+
   return (
     <div 
       className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-all duration-300 ${
@@ -30,7 +42,7 @@ export default function ConfirmDialog({
       }`}
     >
       <div 
-        className={`w-full max-w-sm bg-surface border border-white/10 rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 transform ${
+        className={`w-full max-w-sm bg-surface border border-white/10 rounded-2xl overflow-hidden transition-all duration-300 transform ${
           isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -45,25 +57,54 @@ export default function ConfirmDialog({
               <p className="text-sm text-text-secondary leading-relaxed">{message}</p>
             </div>
           </div>
+
+          {verificationChallenge && (
+            <div className="mt-6 pt-6 border-t border-white/5">
+              <p className="text-[10px] text-text-muted mb-2 uppercase tracking-wider font-bold">
+                Please type the following to confirm:
+              </p>
+              <p className="text-xs text-red-400 bg-red-400/5 p-3 rounded-xl border border-red-400/10 mb-4 select-none font-medium leading-relaxed italic">
+                "{verificationChallenge}"
+              </p>
+              <input
+                type="text"
+                autoComplete="off"
+                value={verifyInput}
+                onChange={(e) => setVerifyInput(e.target.value)}
+                onPaste={(e) => e.preventDefault()}
+                onContextMenu={(e) => e.preventDefault()}
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500/50 transition-all placeholder:text-text-muted/30"
+                placeholder="Type here..."
+              />
+              <p className="text-[9px] text-text-muted mt-2 text-center">
+                Copy/Paste is disabled. You must type the phrase manually.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 bg-white/5 border-t border-white/5">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
-          >
-            {cancelLabel}
-          </button>
-          <button
-            onClick={onConfirm}
-            className={`px-4 py-2 text-sm font-medium rounded-lg text-white transition-all active:scale-95 ${
-              isDestructive
-                ? 'bg-red-500 hover:bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.3)]'
-                : 'bg-accent hover:bg-accent-hover shadow-[0_0_20px_rgba(139,92,246,0.3)]'
-            }`}
-          >
-            {confirmLabel}
-          </button>
+          {cancelLabel && (
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+            >
+              {cancelLabel}
+            </button>
+          )}
+          {confirmLabel && (
+            <button
+              onClick={onConfirm}
+              disabled={isConfirmDisabled}
+              className={`px-4 py-2 text-sm font-medium rounded-lg text-white transition-all active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed ${
+                isDestructive
+                  ? 'bg-red-500 hover:bg-red-600'
+                  : 'bg-accent hover:bg-accent-hover'
+              }`}
+            >
+              {confirmLabel}
+            </button>
+          )}
         </div>
       </div>
     </div>

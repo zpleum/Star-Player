@@ -7,8 +7,10 @@ const ytDlpPath = path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'b
 const youtubedl = create(ytDlpPath);
 
 export async function GET(request: Request) {
+  console.log('API Request URL:', request.url);
   const { searchParams } = new URL(request.url);
   const url = searchParams.get('url');
+  console.log('Extracted YouTube URL:', url);
 
   if (!url) {
     return NextResponse.json({ error: 'URL is required' }, { status: 400 });

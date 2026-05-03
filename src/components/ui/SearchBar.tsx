@@ -18,7 +18,7 @@ export default function SearchBar() {
         placeholder="Search songs, artists, albums..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="block w-full pl-10 pr-10 py-2.5 border border-border rounded-xl leading-5 bg-surface/50 text-text-primary placeholder-text-muted focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent sm:text-sm transition-all"
+        className="block w-full pl-10 pr-10 py-2.5 border border-border rounded-full leading-5 bg-surface/50 text-text-primary placeholder-text-muted focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent sm:text-sm transition-all"
       />
       {searchQuery && (
         <button

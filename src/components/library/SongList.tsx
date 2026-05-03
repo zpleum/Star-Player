@@ -7,8 +7,9 @@ import { useLibrary } from '@/contexts/LibraryContext';
 import { formatTime } from '@/lib/utils';
 import { MOOD_CONFIG, type SongMeta, type MoodCategory } from '@/lib/types';
 import {
-  Play, Pause, Heart, MoreVertical, Plus, Trash2, ListPlus, Music2, GripVertical
+  Play, Pause, Heart, MoreVertical, Plus, Trash2, ListPlus, Music2, GripVertical, Video, Brain
 } from 'lucide-react';
+import { useAudioAnalysis } from '@/hooks/useAudioAnalysis';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
@@ -38,12 +39,14 @@ interface SongListProps {
   showBpm?: boolean;
   emptyMessage?: string;
   playlistId?: string;
+  isQueuePage?: boolean;
   onReorder?: (startIndex: number, endIndex: number) => void;
 }
 
 // Dumb UI component that just renders the row, used by both the list item and the drag overlay
 const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
   song, index, state, coverArts, showMoodBadge, showBpm, onReorder, handlePlay, handleContextMenu, toggleFavorite,
+  isSelected, isSelectionMode,
   style, isDragging, isOverlay, attributes, listeners
 }, ref) => {
   const isCurrentSong = state.currentSong?.id === song.id;
@@ -55,12 +58,13 @@ const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
     <div
       ref={ref}
       style={style}
-      className={`group relative grid grid-cols-[40px_1fr_1fr_80px_80px_40px] gap-3 px-4 py-2.5 items-center rounded-lg cursor-pointer transition-all duration-150 ${
-        isCurrentSong ? 'bg-accent/10 text-accent' : 'hover:bg-surface-hover text-text-primary'
+      className={`group relative grid grid-cols-[40px_1fr_1fr_80px_80px_80px_40px] gap-3 px-4 py-2.5 items-center rounded-lg cursor-pointer transition-all duration-150 ${
+        isCurrentSong ? 'bg-accent/10 text-accent' : 
+        isSelected ? 'bg-accent/20 border-accent/30' : 'hover:bg-surface-hover text-text-primary'
       } ${isDragging && !isOverlay ? 'opacity-30 border border-transparent' : ''} ${
-        isOverlay ? 'bg-surface-hover shadow-2xl scale-[1.02] border border-accent/50 z-50 ring-1 ring-black/5' : ''
+        isOverlay ? 'bg-surface-hover scale-[1.02] border border-accent/50 z-50 ring-1 ring-black/5' : ''
       }`}
-      onClick={() => handlePlay(song, index)}
+      onClick={(e) => handlePlay(song, index, e)}
       onContextMenu={(e) => handleContextMenu(e, song)}
     >
       {/* Number / play icon / drag handle */}
@@ -70,6 +74,23 @@ const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
             <span className="w-[3px] bg-accent animate-eq-bar rounded-full" style={{ animationDelay: '0ms' }} />
             <span className="w-[3px] bg-accent animate-eq-bar rounded-full" style={{ animationDelay: '150ms' }} />
             <span className="w-[3px] bg-accent animate-eq-bar rounded-full" style={{ animationDelay: '300ms' }} />
+          </div>
+        ) : isSelectionMode ? (
+          <div 
+            className="flex items-center gap-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePlay(song, index, e);
+            }}
+          >
+            <div className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${
+              isSelected ? 'bg-accent border-accent text-white' : 'bg-surface border-border hover:border-accent'
+            }`}>
+              {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
+            </div>
+            <span className={`text-[10px] font-bold ${isSelected ? 'text-accent' : 'text-text-muted'}`}>
+              {index + 1}
+            </span>
           </div>
         ) : onReorder ? (
           <div 
@@ -82,10 +103,10 @@ const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
             <span className="text-xs text-text-muted">{index + 1}</span>
           </div>
         ) : (
-          <>
+          <div className="relative w-5 h-5 flex items-center justify-center group-hover:scale-110 transition-transform">
             <span className="text-sm text-text-muted group-hover:hidden">{index + 1}</span>
-            <Play className="w-4 h-4 text-text-primary hidden group-hover:block" />
-          </>
+            <Play className="w-4 h-4 text-accent hidden group-hover:block" />
+          </div>
         )}
       </div>
 
@@ -117,17 +138,27 @@ const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
         <p className="text-xs text-text-muted truncate">{song.album}</p>
       </div>
 
+      {/* Source */}
+      <div className="flex justify-center">
+        {song.source === 'youtube' ? (
+          <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[9px] font-bold border border-red-500/20">
+            <Video className="w-2.5 h-2.5" />
+            YouTube
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[9px] font-bold border border-blue-500/20">
+            <Plus className="w-2.5 h-2.5" />
+            Upload
+          </div>
+        )}
+      </div>
+
       {/* BPM */}
-      {showBpm && (
-        <div className="text-center">
-          {song.bpm ? (
-            <span className="text-xs text-text-muted">{song.bpm}</span>
-          ) : (
-            <span className="text-xs text-text-muted/50">—</span>
-          )}
+      {showBpm ? (
+        <div className="text-center text-xs text-text-muted">
+          {song.bpm || '—'}
         </div>
-      )}
-      {!showBpm && <div />}
+      ) : <div />}
 
       {/* Duration */}
       <div className="text-right text-sm text-text-muted">
@@ -135,7 +166,7 @@ const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+      <div className={`flex items-center gap-1 transition-opacity ${song.favorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} onClick={(e) => e.stopPropagation()}>
         <button
           onClick={() => toggleFavorite(song.id)}
           className={`p-1 transition-colors ${song.favorite ? 'text-pink-500' : 'text-text-muted hover:text-pink-500'}`}
@@ -184,10 +215,17 @@ export default function SongList({
   showBpm = true,
   emptyMessage = 'No songs yet',
   playlistId,
+  isQueuePage,
   onReorder
 }: SongListProps) {
-  const { state, playSong } = usePlayer();
-  const { toggleFavorite, deleteSong, getCoverArtUrl, playlists, addSongsToPlaylist, removeSongFromPlaylist, showToast } = useLibrary();
+  const { state, playSong, addToQueue, removeFromQueue } = usePlayer();
+  const { 
+    toggleFavorite, deleteSong, getCoverArtUrl, playlists, addSongsToPlaylist, 
+    removeSongFromPlaylist, showToast, showErrorPopup,
+    selectedIds, toggleSelection, setSelectedIds, clearSelection,
+    isSelectionMode
+  } = useLibrary();
+  const { state: analysisState, analyzeSong } = useAudioAnalysis();
 
   const [confirmAction, setConfirmAction] = useState<{
     isOpen: boolean;
@@ -238,12 +276,49 @@ export default function SongList({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handlePlay = useCallback((song: SongMeta, index: number) => {
+  const handlePlay = useCallback((song: SongMeta, index: number, e?: React.MouseEvent) => {
+    // If in selection mode, click toggles selection
+    if (isSelectionMode && !e?.ctrlKey && !e?.metaKey && !e?.shiftKey) {
+      toggleSelection(song.id, true);
+      return;
+    }
+
+    // Existing multi-select logic (keyboard)
+    if (e?.ctrlKey || e?.metaKey || e?.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (e.shiftKey && selectedIds.size > 0) {
+        // Range selection
+        const songIds = songs.map(s => s.id);
+        const lastSelectedId = Array.from(selectedIds).pop()!;
+        const lastIndex = songIds.indexOf(lastSelectedId);
+        const currentIndex = index;
+        
+        const start = Math.min(lastIndex, currentIndex);
+        const end = Math.max(lastIndex, currentIndex);
+        
+        const newSelection = new Set(selectedIds);
+        for (let i = start; i <= end; i++) {
+          newSelection.add(songIds[i]);
+        }
+        setSelectedIds(newSelection);
+      } else {
+        toggleSelection(song.id, true);
+      }
+      return;
+    }
+    
     playSong(song, songs, index);
-  }, [playSong, songs]);
+    if (selectedIds.size > 0) clearSelection();
+  }, [playSong, songs, selectedIds, toggleSelection, setSelectedIds, clearSelection]);
 
   const handleContextMenu = (e: React.MouseEvent, song: SongMeta) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (!selectedIds.has(song.id) && !e.ctrlKey && !e.metaKey) {
+      toggleSelection(song.id, false);
+    }
     setContextMenu({ x: e.clientX, y: e.clientY, song });
   };
 
@@ -269,7 +344,7 @@ export default function SongList({
 
   if (songs.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-text-muted">
+      <div className="flex flex-col items-center justify-center py-20 text-text-muted h-full">
         <Music2 className="w-16 h-16 mb-4 opacity-30" />
         <p className="text-lg">{emptyMessage}</p>
       </div>
@@ -294,12 +369,12 @@ export default function SongList({
   return (
     <>
       {/* Header row */}
-      <div className="grid grid-cols-[40px_1fr_1fr_80px_80px_40px] gap-3 px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider border-b border-border">
+      <div className="grid grid-cols-[40px_1fr_1fr_80px_80px_80px_40px] gap-3 px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider border-b border-border">
         <span className="text-center">#</span>
         <span>Title</span>
         <span>Artist / Album</span>
-        {showBpm && <span className="text-center">BPM</span>}
-        {!showBpm && <span />}
+        <span className="text-center">Source</span>
+        {showBpm ? <span className="text-center">BPM</span> : <span />}
         <span className="text-right">Duration</span>
         <span />
       </div>
@@ -328,9 +403,11 @@ export default function SongList({
                 showMoodBadge={showMoodBadge}
                 showBpm={showBpm}
                 onReorder={onReorder}
-                handlePlay={handlePlay}
+                handlePlay={(s: any, i: any, e: any) => handlePlay(s, i, e)}
                 handleContextMenu={handleContextMenu}
                 toggleFavorite={toggleFavorite}
+                isSelected={selectedIds.has(song.id)}
+                isSelectionMode={isSelectionMode}
               />
             ))}
           </SortableContext>
@@ -361,7 +438,7 @@ export default function SongList({
       {contextMenu && (
         <div
           ref={menuRef}
-          className="fixed z-50 w-52 py-1 rounded-xl glass-strong shadow-2xl animate-fade-in"
+          className="fixed z-50 w-52 py-1 rounded-xl glass-strong animate-fade-in"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <button
@@ -370,6 +447,70 @@ export default function SongList({
           >
             <Play className="w-4 h-4" /> Play
           </button>
+
+          {isQueuePage ? (
+            <button
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-surface-hover transition-colors"
+              onClick={() => {
+                const songsToRemove = selectedIds.has(contextMenu.song.id) 
+                  ? songs.filter(s => selectedIds.has(s.id))
+                  : [contextMenu.song];
+                
+                songsToRemove.forEach(s => {
+                  const idx = songs.indexOf(s);
+                  if (idx !== -1) removeFromQueue(idx);
+                });
+                
+                clearSelection();
+                setContextMenu(null);
+                showToast('success', `Removed ${songsToRemove.length} song(s) from queue`);
+              }}
+            >
+              <Trash2 className="w-4 h-4" /> Remove from Queue
+            </button>
+          ) : (
+            <button
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-hover transition-colors"
+              onClick={() => {
+                const songsToAdd = selectedIds.has(contextMenu.song.id)
+                  ? songs.filter(s => selectedIds.has(s.id))
+                  : [contextMenu.song];
+                
+                addToQueue(songsToAdd);
+                clearSelection();
+                setContextMenu(null);
+                showToast('success', `Added ${songsToAdd.length} song(s) to queue`);
+              }}
+            >
+              <ListPlus className="w-4 h-4" /> Add to Queue
+            </button>
+          )}
+          
+          {!contextMenu.song.analyzed && (
+            <button
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-hover transition-colors"
+              onClick={async () => {
+                const songId = contextMenu.song.id;
+                const songTitle = contextMenu.song.title;
+                setContextMenu(null);
+                showToast('info', `Analyzing "${songTitle}"...`);
+                const result = await analyzeSong(songId, songTitle);
+                if (result.success) {
+                  showToast('success', `Analysis complete for "${songTitle}"`);
+                } else {
+                  showErrorPopup(
+                    'Analysis Failed',
+                    result.error || 'The audio file format might be unsupported or the file is corrupted.',
+                    `Failed to analyze: ${songTitle}`
+                  );
+                }
+              }}
+              disabled={analysisState.status === 'analyzing' && analysisState.currentSongId === contextMenu.song.id}
+            >
+              <Brain className={`w-4 h-4 ${analysisState.status === 'analyzing' && analysisState.currentSongId === contextMenu.song.id ? 'animate-pulse text-accent' : ''}`} />
+              {analysisState.status === 'analyzing' && analysisState.currentSongId === contextMenu.song.id ? 'Analyzing...' : 'Analyze Audio'}
+            </button>
+          )}
           <button
             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-hover transition-colors"
             onClick={() => { toggleFavorite(contextMenu.song.id); setContextMenu(null); }}
@@ -387,7 +528,12 @@ export default function SongList({
                 <button
                   key={pl.id}
                   className="w-full flex items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-surface-hover transition-colors"
-                  onClick={() => { addSongsToPlaylist(pl.id, [contextMenu.song.id]); setContextMenu(null); }}
+                  onClick={() => { 
+                    const ids = selectedIds.has(contextMenu.song.id) ? Array.from(selectedIds) : [contextMenu.song.id];
+                    addSongsToPlaylist(pl.id, ids); 
+                    setContextMenu(null); 
+                    if (selectedIds.size > 0) clearSelection();
+                  }}
                 >
                   <ListPlus className="w-4 h-4" /> {pl.name}
                 </button>
@@ -401,7 +547,11 @@ export default function SongList({
               <button
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-surface-hover transition-colors"
                 onClick={() => {
-                  setConfirmAction({ isOpen: true, type: 'removeFromPlaylist', songId: contextMenu.song.id, songTitle: contextMenu.song.title });
+                  if (selectedIds.size > 1) {
+                    setConfirmAction({ isOpen: true, type: 'removeFromPlaylist', songId: 'multiple', songTitle: `${selectedIds.size} songs` });
+                  } else {
+                    setConfirmAction({ isOpen: true, type: 'removeFromPlaylist', songId: contextMenu.song.id, songTitle: contextMenu.song.title });
+                  }
                   setContextMenu(null);
                 }}
               >
@@ -414,32 +564,46 @@ export default function SongList({
           <button
             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-surface-hover transition-colors"
             onClick={() => {
-              setConfirmAction({ isOpen: true, type: 'delete', songId: contextMenu.song.id, songTitle: contextMenu.song.title });
+              if (selectedIds.size > 1) {
+                setConfirmAction({ isOpen: true, type: 'delete', songId: 'multiple', songTitle: `${selectedIds.size} songs` });
+              } else {
+                setConfirmAction({ isOpen: true, type: 'delete', songId: contextMenu.song.id, songTitle: contextMenu.song.title });
+              }
               setContextMenu(null);
             }}
           >
-            <Trash2 className="w-4 h-4" /> Delete song
+            <Trash2 className="w-4 h-4" /> {selectedIds.size > 1 ? `Delete ${selectedIds.size} songs` : 'Delete song'}
           </button>
         </div>
       )}
 
       <ConfirmDialog
         isOpen={confirmAction.isOpen}
-        title={confirmAction.type === 'delete' ? 'Delete Song' : 'Remove from Playlist'}
+        title={confirmAction.type === 'delete' ? 'Delete Songs' : 'Remove from Playlist'}
         message={
           confirmAction.type === 'delete'
-            ? `Are you sure you want to permanently delete "${confirmAction.songTitle}"? This action cannot be undone.`
-            : `Are you sure you want to remove "${confirmAction.songTitle}" from this playlist?`
+            ? `Are you sure you want to permanently delete ${confirmAction.songTitle}? This action cannot be undone.`
+            : `Are you sure you want to remove ${confirmAction.songTitle} from this playlist?`
         }
         confirmLabel="Delete"
         isDestructive={true}
         onConfirm={async () => {
           if (!confirmAction.songId) return;
+          const ids = confirmAction.songId === 'multiple' ? Array.from(selectedIds) : [confirmAction.songId];
+          
           if (confirmAction.type === 'delete') {
-            await deleteSong(confirmAction.songId);
+            for (const id of ids) {
+              await deleteSong(id);
+            }
+            if (ids.length > 1) showToast('success', `Deleted ${ids.length} songs`);
           } else if (confirmAction.type === 'removeFromPlaylist' && playlistId) {
-            await removeSongFromPlaylist(playlistId, confirmAction.songId);
+            for (const id of ids) {
+              await removeSongFromPlaylist(playlistId, id);
+            }
+            if (ids.length > 1) showToast('success', `Removed ${ids.length} songs from playlist`);
           }
+          
+          clearSelection();
           setConfirmAction({ isOpen: false, type: 'delete' });
         }}
         onCancel={() => setConfirmAction({ isOpen: false, type: 'delete' })}

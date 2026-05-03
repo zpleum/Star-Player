@@ -61,7 +61,7 @@ export default function AddSongsModal({ playlist, onClose }: AddSongsModalProps)
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-2xl max-h-[85vh] bg-surface border border-border shadow-2xl rounded-3xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 zoom-in-95 duration-300"
+        className="w-full max-w-2xl max-h-[85vh] bg-surface border border-border rounded-3xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

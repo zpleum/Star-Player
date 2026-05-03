@@ -52,15 +52,16 @@ export function useAudioAnalysis() {
       }));
       
       await refreshSongs();
-      return true;
+      return { success: true };
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       console.error(`Failed to analyze song ${id}:`, error);
       setState((prev) => ({
         ...prev,
         status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMsg,
       }));
-      return false;
+      return { success: false, error: errorMsg };
     }
   };
 

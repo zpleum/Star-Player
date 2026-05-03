@@ -1,4 +1,6 @@
+'use client';
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { usePlayer } from '@/contexts/PlayerContext';
 
 type VisualizerMode = 'bars' | 'wave' | 'circular';
 const MODES: VisualizerMode[] = ['bars', 'wave', 'circular'];
@@ -10,12 +12,22 @@ interface VisualizerProps {
 }
 
 export default function Visualizer({ analyser, isPlaying, className = '' }: VisualizerProps) {
+  const { state: playerState } = usePlayer();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
   const [modeIndex, setModeIndex] = useState(0);
   const isPlayingRef = useRef(isPlaying);
   
   const mode = MODES[modeIndex];
+
+  // Helper to add alpha to hex color
+  const hexToRgba = (hex: string, alpha: number) => {
+    if (!hex.startsWith('#')) return hex;
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
@@ -31,6 +43,10 @@ export default function Visualizer({ analyser, isPlaying, className = '' }: Visu
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Use current accent colors
+    const primaryColor = playerState.accentColor;
+    const secondaryColor = playerState.accentColor2;
 
     // Cancel any existing loop
     if (animFrameRef.current) {
@@ -77,7 +93,7 @@ export default function Visualizer({ analyser, isPlaying, className = '' }: Visu
       }
 
       let isAnimating = false;
-      const easing = 0.15; // Smoothness factor
+      const easing = 0.50; // Sensitivity
 
       ctx.clearRect(0, 0, width, height);
 
@@ -94,32 +110,36 @@ export default function Visualizer({ analyser, isPlaying, className = '' }: Visu
           if (Math.abs(targetValue - smoothedFreq[i * step]) > 0.5) isAnimating = true;
 
           const value = smoothedFreq[i * step];
-          // Add some smoothing/minimum height when playing, else 0
-          const barHeight = Math.max((value / 255) * height * 0.8, playing ? 2 : 0);
+          const barHeight = Math.max((value / 255) * height * 1.5, playing ? 2 : 0);
           const y = height - barHeight;
 
           const gradient = ctx.createLinearGradient(0, y, 0, height);
-          gradient.addColorStop(0, 'rgba(139, 92, 246, 0.8)'); // accent
-          gradient.addColorStop(0.5, 'rgba(236, 72, 153, 0.6)'); // pink
-          gradient.addColorStop(1, 'rgba(139, 92, 246, 0.2)');
+          gradient.addColorStop(0, hexToRgba(primaryColor, 0.8));
+          gradient.addColorStop(0.5, hexToRgba(secondaryColor, 0.6));
+          gradient.addColorStop(1, hexToRgba(primaryColor, 0.2));
 
           ctx.fillStyle = gradient;
           
-          // Draw right side
           const xRight = centerX + (i * barWidth);
           ctx.fillRect(xRight + 1, y, barWidth - 2, barHeight);
 
-          // Draw left side (mirrored)
           const xLeft = centerX - ((i + 1) * barWidth);
           ctx.fillRect(xLeft + 1, y, barWidth - 2, barHeight);
         }
       } 
       else if (mode === 'wave') {
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = 'rgba(236, 72, 153, 0.8)'; // pink
+        const gradient = ctx.createLinearGradient(0, 0, width, 0);
+        gradient.addColorStop(0, hexToRgba(primaryColor, 0.5));
+        gradient.addColorStop(0.5, secondaryColor);
+        gradient.addColorStop(1, hexToRgba(primaryColor, 0.5));
+
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = gradient;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.beginPath();
 
-        const sliceWidth = width / bufferLength;
+        const sliceWidth = (width * 1.0) / bufferLength;
         let x = 0;
 
         for (let i = 0; i < bufferLength; i++) {
@@ -128,7 +148,7 @@ export default function Visualizer({ analyser, isPlaying, className = '' }: Visu
           
           if (Math.abs(targetValue - smoothedTime[i]) > 0.5) isAnimating = true;
 
-          const v = smoothedTime[i] / 128.0; // 128 is center
+          const v = smoothedTime[i] / 128.0; 
           const y = (v * height) / 2;
 
           if (i === 0) {
@@ -144,42 +164,73 @@ export default function Visualizer({ analyser, isPlaying, className = '' }: Visu
       else if (mode === 'circular') {
         const centerX = width / 2;
         const centerY = height / 2;
-        const maxRadius = Math.min(centerX, centerY) - 10;
-        const innerRadius = maxRadius * 0.3;
+        const maxRadius = Math.min(centerX, centerY) - 5;
+        const innerRadius = maxRadius * 0.4;
+        
+        // Calculate average volume for pulsing effect
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) sum += freqData[i];
+        const avg = sum / bufferLength;
+        const pulse = (avg / 255) * 15;
 
-        const barCount = 64;
+        // Draw central core pulse
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, innerRadius - 5 + pulse, 0, Math.PI * 2);
+        const coreGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, innerRadius + pulse);
+        coreGradient.addColorStop(0, hexToRgba(primaryColor, 0.4));
+        coreGradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = coreGradient;
+        ctx.fill();
+
+        const barCount = 120; // More bars for a smoother look
         const step = Math.floor(bufferLength / barCount);
+        const time = Date.now() / 2000; // Slow rotation
 
         for (let i = 0; i < barCount; i++) {
-          const targetValue = freqData[i * step];
+          const targetValue = freqData[i * step] || 0;
+          smoothedFreq[i * step] = smoothedFreq[i * step] || 0;
           smoothedFreq[i * step] += (targetValue - smoothedFreq[i * step]) * easing;
           
           if (Math.abs(targetValue - smoothedFreq[i * step]) > 0.5) isAnimating = true;
 
           const value = smoothedFreq[i * step];
           const amplitude = (value / 255) * (maxRadius - innerRadius);
-          const angle = (i * 2 * Math.PI) / barCount;
+          
+          // Add a bit of movement to the angle
+          const angle = (i * 2 * Math.PI) / barCount + time;
 
-          const x1 = centerX + Math.cos(angle) * innerRadius;
-          const y1 = centerY + Math.sin(angle) * innerRadius;
-          const x2 = centerX + Math.cos(angle) * (innerRadius + amplitude);
-          const y2 = centerY + Math.sin(angle) * (innerRadius + amplitude);
+          const x1 = centerX + Math.cos(angle) * (innerRadius + pulse);
+          const y1 = centerY + Math.sin(angle) * (innerRadius + pulse);
+          const x2 = centerX + Math.cos(angle) * (innerRadius + pulse + amplitude + 2);
+          const y2 = centerY + Math.sin(angle) * (innerRadius + pulse + amplitude + 2);
 
-          const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-          gradient.addColorStop(0, 'rgba(139, 92, 246, 0.8)');
-          gradient.addColorStop(1, 'rgba(236, 72, 153, 0.8)');
+          const barGradient = ctx.createLinearGradient(x1, y1, x2, y2);
+          barGradient.addColorStop(0, hexToRgba(primaryColor, 0.9));
+          barGradient.addColorStop(0.5, hexToRgba(secondaryColor, 0.7));
+          barGradient.addColorStop(1, hexToRgba(primaryColor, 0.4));
 
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
-          ctx.lineWidth = 3;
-          ctx.strokeStyle = gradient;
+          
+          // Thicker bars for lower frequencies
+          const baseWidth = 2;
+          ctx.lineWidth = baseWidth + (1 - i / barCount) * 2;
+          
+          ctx.strokeStyle = barGradient;
           ctx.lineCap = 'round';
+          
           ctx.stroke();
         }
+        
+        // Draw a faint outer ring
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, innerRadius + pulse, 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(primaryColor, 0.15);
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
 
-      // Stop animation loop if fully paused and returned to resting state
       if (!playing && !isAnimating) {
         cancelAnimationFrame(animFrameRef.current);
         animFrameRef.current = 0;
@@ -194,16 +245,14 @@ export default function Visualizer({ analyser, isPlaying, className = '' }: Visu
         animFrameRef.current = 0;
       }
     };
-  }, [analyser, mode]);
+  }, [analyser, mode, playerState.accentColor, playerState.accentColor2]);
 
   useEffect(() => {
-    // Start drawing when component mounts or analyser changes
     const cleanup = draw();
     return cleanup;
   }, [draw]);
 
   useEffect(() => {
-    // If we start playing again but the loop was stopped, restart it
     if (isPlaying && !animFrameRef.current) {
       draw();
     }

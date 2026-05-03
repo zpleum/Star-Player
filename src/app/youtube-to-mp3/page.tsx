@@ -1,10 +1,10 @@
 'use client';
-import YouTubeDownloader from '@/components/youtube/YouTubeDownloader';
+import YouTubeToMP3 from '@/components/youtube/YouTubeToMP3';
 import { usePlayer } from '@/contexts/PlayerContext';
 
-export default function YouTubePage() {
+export default function YouTubeToMP3Page() {
   const { state: playerState } = usePlayer();
-  
+
   return (
     <div className="flex-1 flex flex-col h-full bg-background overflow-hidden relative">
       {/* Dynamic Background Mesh Gradient */}
@@ -21,9 +21,9 @@ export default function YouTubePage() {
           `
         }}
       />
-      
+
       <div className="flex-1 h-full overflow-y-auto relative z-10">
-        <YouTubeDownloader />
+        <YouTubeToMP3 />
       </div>
     </div>
   );

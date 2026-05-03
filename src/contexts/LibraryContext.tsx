@@ -2,7 +2,7 @@
 // ============================================================
 // Star Player — Library Context (Songs, Playlists, Search)
 // ============================================================
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { SongMeta, Playlist, MoodCategory, Toast, ToastType } from '@/lib/types';
 import * as db from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
@@ -51,6 +51,29 @@ interface LibraryContextValue {
   toasts: Toast[];
   showToast: (type: ToastType, message: string) => void;
   dismissToast: (id: string) => void;
+
+  // Selection
+  isSelectionMode: boolean;
+  setSelectionMode: (val: boolean) => void;
+  selectedIds: Set<string>;
+  setSelectedIds: (ids: Set<string>) => void;
+  toggleSelection: (id: string, multi?: boolean, range?: boolean) => void;
+  clearSelection: () => void;
+  selectAll: (ids: string[]) => void;
+
+  // Global Modals
+  isCreatePlaylistModalOpen: boolean;
+  openCreatePlaylistModal: () => void;
+  closeCreatePlaylistModal: () => void;
+
+  // Global Error Popup
+  showErrorPopup: (title: string, message: string, toastOnClose?: string) => void;
+  errorModal: { isOpen: boolean; title: string; message: string; toastOnClose?: string };
+  closeErrorPopup: () => void;
+
+  // View Mode
+  viewMode: 'list' | 'grid';
+  setViewMode: (mode: 'list' | 'grid') => void;
 }
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
@@ -70,6 +93,10 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isSelectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isCreatePlaylistModalOpen, setCreatePlaylistModalOpen] = useState(false);
+  const [viewMode, setViewModeState] = useState<'list' | 'grid'>('list');
   const coverArtCache = useRef(new Map<string, string>()).current;
 
   // Toast system
@@ -85,10 +112,54 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  // Global Error Modal
+  const [errorModal, setErrorModal] = useState<{ isOpen: boolean; title: string; message: string; toastOnClose?: string }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const showErrorPopup = useCallback((title: string, message: string, toastOnClose?: string) => {
+    setErrorModal({ isOpen: true, title, message, toastOnClose });
+  }, []);
+
+  const closeErrorPopup = useCallback(() => {
+    const { toastOnClose } = errorModal;
+    setErrorModal((prev) => ({ ...prev, isOpen: false }));
+    if (toastOnClose) {
+      showToast('error', toastOnClose);
+    }
+  }, [errorModal, showToast]);
+
+  // Selection Logic
+  const toggleSelection = useCallback((id: string, multi = false, range = false) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (multi) {
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+      } else {
+        if (next.has(id) && next.size === 1) next.clear();
+        else {
+          next.clear();
+          next.add(id);
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const selectAll = useCallback((ids: string[]) => setSelectedIds(new Set(ids)), []);
+
   // Load initial data
   useEffect(() => {
     loadData();
   }, []);
+
+  const openCreatePlaylistModal = useCallback(() => setCreatePlaylistModalOpen(true), []);
+  const closeCreatePlaylistModal = useCallback(() => setCreatePlaylistModalOpen(false), []);
 
   const sortSongsByOrder = (songsArray: SongMeta[], orderArray?: string[]) => {
     if (!orderArray || orderArray.length === 0) return songsArray;
@@ -113,6 +184,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       ]);
       setSongs(sortSongsByOrder(songsData, settings.libraryOrder));
       setPlaylists(playlistsData);
+      if (settings.viewMode) setViewModeState(settings.viewMode);
     } catch (err) {
       console.error('Failed to load data:', err);
     }
@@ -149,15 +221,17 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Filtered songs
-  const filteredSongs = songs.filter((song) => {
-    const matchesSearch =
-      !searchQuery ||
-      song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      song.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      song.album.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesMood = !moodFilter || song.mood === moodFilter;
-    return matchesSearch && matchesMood;
-  });
+  const filteredSongs = useMemo(() => {
+    return songs.filter((song) => {
+      const matchesSearch =
+        !searchQuery ||
+        song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        song.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        song.album.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesMood = !moodFilter || song.mood === moodFilter;
+      return matchesSearch && matchesMood;
+    });
+  }, [songs, searchQuery, moodFilter]);
 
   // Import files
   const importFiles = useCallback(
@@ -184,13 +258,14 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
           let title = file.name.replace(/\.[^/.]+$/, '');
           let artist = 'Unknown Artist';
           
-          // Try to split filename by " - " or " - "
+          // Try to split filename to get a fallback artist but keep the full title
           const separators = [' - ', ' – ', ' — ', ' -'];
           for (const sep of separators) {
             if (title.includes(sep)) {
               const parts = title.split(sep);
               artist = parts[0].trim();
-              title = parts.slice(1).join(sep).trim();
+              // Note: We keep the title as the full filename (without extension) 
+              // as requested, so we don't re-assign it here.
               break;
             }
           }
@@ -237,6 +312,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
             moodConfidence: null,
             audioFeatures: null,
             analyzed: false,
+            source: 'upload' as const,
           };
 
           await db.addSong(song);
@@ -283,7 +359,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       coverArtCache.delete(id);
       await refreshSongs();
       await refreshPlaylists();
-      showToast('info', 'Song deleted');
+      showToast('playlist', 'Song deleted');
     },
     [refreshSongs, refreshPlaylists, coverArtCache]
   );
@@ -292,7 +368,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     async (id: string) => {
       const isFav = await db.toggleFavorite(id);
       await refreshSongs();
-      showToast('success', isFav ? 'Added to favorites' : 'Removed from favorites');
+      showToast('favorite', isFav ? 'Added to favorites' : 'Removed from favorites');
     },
     [refreshSongs]
   );
@@ -377,9 +453,9 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
 
   const generateLyrics = useCallback(
     async (id: string) => {
+      const song = songs.find(s => s.id === id);
       showToast('info', 'Searching for lyrics...');
       try {
-        const song = songs.find(s => s.id === id);
         if (!song) throw new Error('Song not found');
 
         const response = await fetch('/api/lyrics', {
@@ -408,11 +484,15 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error: any) {
         console.error('Lyrics generation failed:', error);
-        showToast('error', error.message || 'Lyrics generation failed');
+        showErrorPopup(
+          'Lyrics Not Found', 
+          error.message || 'The song may not be in the lyrics database yet. Try cleaning the title or artist name manually.',
+          `Failed: ${song?.title || 'Unknown Song'}`
+        );
         throw error;
       }
     },
-    [songs, refreshSongs, showToast]
+    [songs, refreshSongs, showErrorPopup]
   );
 
   // Playlist operations
@@ -429,7 +509,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       };
       await db.addPlaylist(playlist);
       await refreshPlaylists();
-      showToast('success', `Created playlist "${name}"`);
+      showToast('playlist', `Created playlist "${name}"`);
       return playlist;
     },
     [refreshPlaylists]
@@ -439,7 +519,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     async (id: string) => {
       await db.deletePlaylist(id);
       await refreshPlaylists();
-      showToast('info', 'Playlist deleted');
+      showToast('playlist', 'Playlist deleted');
     },
     [refreshPlaylists]
   );
@@ -452,7 +532,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       playlist.songIds = [...playlist.songIds, ...newIds];
       await db.updatePlaylist(playlist);
       await refreshPlaylists();
-      showToast('success', `Added ${newIds.length} song${newIds.length > 1 ? 's' : ''} to playlist`);
+      showToast('playlist', `Added ${newIds.length} song${newIds.length > 1 ? 's' : ''} to playlist`);
     },
     [refreshPlaylists]
   );
@@ -483,6 +563,12 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     },
     [refreshPlaylists]
   );
+  
+  const setViewMode = useCallback(async (mode: 'list' | 'grid') => {
+    setViewModeState(mode);
+    const settings = await db.getSettings();
+    await db.saveSettings({ ...settings, viewMode: mode });
+  }, []);
 
   // Cover art cache
   const getCoverArtUrl = useCallback(
@@ -529,6 +615,21 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     toasts,
     showToast,
     dismissToast,
+    showErrorPopup,
+    errorModal,
+    closeErrorPopup,
+    selectedIds,
+    setSelectedIds,
+    isSelectionMode,
+    setSelectionMode,
+    toggleSelection,
+    clearSelection,
+    selectAll,
+    isCreatePlaylistModalOpen,
+    openCreatePlaylistModal,
+    closeCreatePlaylistModal,
+    viewMode,
+    setViewMode,
   };
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;

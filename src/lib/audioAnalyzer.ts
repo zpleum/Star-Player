@@ -13,21 +13,52 @@ export async function analyzeAudio(audioBlob: Blob): Promise<{
   mood: ReturnType<typeof classifyMood>;
 }> {
   // 1. Decode audio blob to AudioBuffer
-  const arrayBuffer = await audioBlob.arrayBuffer();
-  const audioCtx = new OfflineAudioContext(1, 1, 44100); // temp context for decoding
-  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  // Check size first to prevent browser crash
+  if (audioBlob.size > 250 * 1024 * 1024) {
+    throw new Error('File too large for analysis (>250MB). Browser may run out of memory.');
+  }
 
-  // 2. Extract features using Meyda
-  const features = await extractFeatures(audioBuffer);
+  let arrayBuffer: ArrayBuffer | null = await audioBlob.arrayBuffer();
+  
+  // Use standard AudioContext for decoding (more robust than OfflineAudioContext in some browsers)
+  const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
+  const tempCtx = new AudioContextClass();
+  
+  try {
+    const audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
+    
+    // Clear arrayBuffer immediately to free memory
+    arrayBuffer = null;
+    
+    // 2. Extract features using Meyda
+    const features = await extractFeatures(audioBuffer);
 
-  // 3. Detect BPM
-  const bpm = await detectBPM(audioBuffer);
-  features.bpm = bpm;
+    // 3. Detect BPM
+    const bpm = await detectBPM(audioBuffer);
+    features.bpm = bpm;
 
-  // 4. Classify mood
-  const mood = classifyMood(features);
+    // 4. Classify mood
+    const mood = classifyMood(features);
 
-  return { features, mood };
+    return { features, mood };
+  } catch (err) {
+    console.error('Audio decoding error details:', {
+      name: (err as Error).name,
+      message: (err as Error).message,
+      blobSize: audioBlob.size,
+      blobType: audioBlob.type,
+    });
+
+    if (err instanceof Error && (err.name === 'EncodingError' || err.message.includes('decode'))) {
+      throw new Error(`Unable to decode audio (${(audioBlob.size / 1024 / 1024).toFixed(1)}MB). The format might be unsupported or the file corrupted.`);
+    }
+    throw err;
+  } finally {
+    // Always clean up the temporary context
+    if (tempCtx.state !== 'closed') {
+      await tempCtx.close().catch(() => {});
+    }
+  }
 }
 
 async function extractFeatures(buffer: AudioBuffer): Promise<AudioFeatures> {

@@ -3,7 +3,8 @@
 // Star Player — Player Context (Global Audio State)
 // ============================================================
 import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
-import type { SongMeta, RepeatMode, MoodCategory, PlayerState } from '@/lib/types';
+import { usePathname } from 'next/navigation';
+import { MOOD_CONFIG, type SongMeta, type RepeatMode, type MoodCategory, type PlayerState } from '@/lib/types';
 import { shuffleArray } from '@/lib/utils';
 import * as db from '@/lib/db';
 
@@ -29,7 +30,14 @@ type PlayerAction =
   | { type: 'CLEAR_QUEUE' }
   | { type: 'REORDER_QUEUE'; payload: { from: number; to: number } }
   | { type: 'SET_EQ_BAND'; payload: { index: number; value: number } }
-  | { type: 'SET_EQ_PRESET'; payload: { name: string; gains: number[] } };
+  | { type: 'SET_EQ_PRESET'; payload: { name: string; gains: number[] } }
+  | { type: 'SET_ACCENT_COLORS'; payload: { 
+      c1: string; c2: string; c3: string; c4: string; c5: string;
+      accentPositions: { x: string; y: string }[];
+    } }
+  | { type: 'RANDOMIZE_POSITIONS' }
+  | { type: 'RANDOMIZE_COLORS' }
+  | { type: 'TOGGLE_DYNAMIC_BACKGROUND' };
 
 const initialState: PlayerState & { eqGains: number[]; eqPreset: string } = {
   currentSong: null,
@@ -43,6 +51,19 @@ const initialState: PlayerState & { eqGains: number[]; eqPreset: string } = {
   repeatMode: 'off',
   isShuffled: false,
   isFullPlayerOpen: false,
+  accentColor: '#8b5cf6',
+  accentColor2: '#ec4899',
+  accentColor3: '#6366f1',
+  accentColor4: '#10b981',
+  accentColor5: '#f59e0b',
+  accentPositions: [
+    { x: '0%', y: '0%' },
+    { x: '100%', y: '0%' },
+    { x: '50%', y: '100%' },
+    { x: '100%', y: '100%' },
+    { x: '50%', y: '0%' }
+  ],
+  dynamicBackgroundEnabled: true,
   eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   eqPreset: 'Flat',
 };
@@ -143,6 +164,45 @@ function playerReducer(
     }
     case 'SET_EQ_PRESET':
       return { ...state, eqPreset: action.payload.name, eqGains: action.payload.gains };
+    case 'SET_ACCENT_COLORS':
+      return { 
+        ...state, 
+        accentColor: action.payload.c1, 
+        accentColor2: action.payload.c2, 
+        accentColor3: action.payload.c3,
+        accentColor4: action.payload.c4,
+        accentColor5: action.payload.c5,
+        accentPositions: action.payload.accentPositions
+      };
+    case 'RANDOMIZE_POSITIONS':
+      return {
+        ...state,
+        accentPositions: Array.from({ length: 5 }, () => ({
+          x: `${Math.random() * 100}%`,
+          y: `${Math.random() * 100}%`
+        }))
+      };
+    case 'RANDOMIZE_COLORS': {
+      // Generate a random base hue
+      const baseHue = Math.floor(Math.random() * 360);
+      const generateColor = (hueOffset: number, sat: number, light: number) => 
+        `hsl(${(baseHue + hueOffset) % 360}, ${sat}%, ${light}%)`;
+      
+      return {
+        ...state,
+        accentColor: generateColor(0, 70, 60),
+        accentColor2: generateColor(40, 65, 55),
+        accentColor3: generateColor(80, 60, 50),
+        accentColor4: generateColor(160, 75, 45),
+        accentColor5: generateColor(280, 60, 55),
+        accentPositions: Array.from({ length: 5 }, () => ({
+          x: `${Math.random() * 100}%`,
+          y: `${Math.random() * 100}%`
+        }))
+      };
+    }
+    case 'TOGGLE_DYNAMIC_BACKGROUND':
+      return { ...state, dynamicBackgroundEnabled: !state.dynamicBackgroundEnabled };
     default:
       return state;
   }
@@ -178,6 +238,8 @@ interface PlayerContextValue {
   
   setEqBand: (index: number, value: number) => void;
   setEqPreset: (name: string, gains: number[]) => void;
+  setAccentColor: (color: string | { c1: string; c2: string; c3: string; c4: string; c5: string }) => void;
+  toggleDynamicBackground: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -190,6 +252,16 @@ export function usePlayer() {
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(playerReducer, initialState);
+  const pathname = usePathname();
+
+  // Randomize orbs on navigation
+  useEffect(() => {
+    if (!state.currentSong) {
+      dispatch({ type: 'RANDOMIZE_COLORS' });
+    } else {
+      dispatch({ type: 'RANDOMIZE_POSITIONS' });
+    }
+  }, [pathname, !!state.currentSong]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -245,22 +317,63 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.eqGains]);
 
-  // Settings Persistence
-  const isInitialLoad = useRef(true);
-
-  // Load settings on mount
+  // Dynamic Theme Color Injection
   useEffect(() => {
-    db.getSettings().then(settings => {
-      dispatch({ type: 'SET_VOLUME', payload: settings.volume });
-      dispatch({ type: 'SET_REPEAT', payload: settings.repeatMode });
-      dispatch({ type: 'SET_SHUFFLE', payload: settings.shuffleEnabled });
-      dispatch({ type: 'SET_EQ_PRESET', payload: { name: settings.equalizerPresetId, gains: settings.customEQGains } });
-      // Sync volume to actual audio element
-      if (audioRef.current) {
-        audioRef.current.volume = settings.volume;
+    if (typeof document !== 'undefined') {
+      const root = document.documentElement;
+      root.style.setProperty('--accent', state.accentColor);
+      root.style.setProperty('--accent-2', state.accentColor2);
+      root.style.setProperty('--accent-3', state.accentColor3);
+      root.style.setProperty('--accent-4', state.accentColor4);
+      root.style.setProperty('--accent-5', state.accentColor5);
+      
+      if (state.accentPositions && Array.isArray(state.accentPositions)) {
+        state.accentPositions.forEach((pos, i) => {
+          root.style.setProperty(`--accent-pos-${i+1}-x`, pos.x);
+          root.style.setProperty(`--accent-pos-${i+1}-y`, pos.y);
+        });
       }
-    });
-  }, []);
+
+      root.setAttribute('data-dynamic-bg', state.dynamicBackgroundEnabled.toString());
+
+      // Calculate derived colors from primary accent
+      if (state.accentColor.startsWith('#')) {
+        const hex = state.accentColor.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        
+        // Calculate contrast color for text on accent background
+        // Using relative luminance formula
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        const accentForeground = luminance > 0.6 ? '#000000' : '#ffffff';
+        root.style.setProperty('--accent-foreground', accentForeground);
+        root.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
+
+        const darken = (c: number) => Math.max(0, Math.floor(c * 0.85));
+        const darkerHex = `#${darken(r).toString(16).padStart(2, '0')}${darken(g).toString(16).padStart(2, '0')}${darken(b).toString(16).padStart(2, '0')}`;
+        root.style.setProperty('--accent-hover', darkerHex);
+
+        const toBg = (c: number) => Math.max(6, Math.floor(c * 0.1)); 
+        const bgHex = `#${toBg(r).toString(16).padStart(2, '0')}${toBg(g).toString(16).padStart(2, '0')}${toBg(b).toString(16).padStart(2, '0')}`;
+        root.style.setProperty('--background', bgHex);
+
+        const toSurface = (c: number) => Math.max(8, Math.floor(c * 0.08));
+        const sr = toSurface(r), sg = toSurface(g), sb = toSurface(b);
+        const surfaceHex = `#${sr.toString(16).padStart(2, '0')}${sg.toString(16).padStart(2, '0')}${sb.toString(16).padStart(2, '0')}`;
+        root.style.setProperty('--surface', surfaceHex);
+        root.style.setProperty('--surface-rgb', `${sr}, ${sg}, ${sb}`);
+        
+        const toSurfaceHover = (c: number) => Math.max(18, Math.floor(c * 0.22));
+        const surfaceHoverHex = `#${toSurfaceHover(r).toString(16).padStart(2, '0')}${toSurfaceHover(g).toString(16).padStart(2, '0')}${toSurfaceHover(b).toString(16).padStart(2, '0')}`;
+        root.style.setProperty('--surface-hover', surfaceHoverHex);
+
+        const toBorder = (c: number) => Math.max(24, Math.floor(c * 0.28));
+        const borderHex = `#${toBorder(r).toString(16).padStart(2, '0')}${toBorder(g).toString(16).padStart(2, '0')}${toBorder(b).toString(16).padStart(2, '0')}`;
+        root.style.setProperty('--border-color', borderHex);
+      }
+    }
+  }, [state.accentColor, state.accentColor2, state.accentColor3, state.accentColor4, state.accentColor5, state.accentPositions]);
 
   // Always keep audio element volume in sync with state
   useEffect(() => {
@@ -270,24 +383,65 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.volume, state.isMuted]);
 
-  // Save settings when they change
+  // Settings Persistence & Initial Randomization
+  const isInitialLoad = useRef(true);
+
+  // Load settings and randomize orbs on mount
   useEffect(() => {
     if (isInitialLoad.current) {
       isInitialLoad.current = false;
-      return;
-    }
-    
-    db.getSettings().then(settings => {
-      db.saveSettings({
-        ...settings,
-        volume: state.volume,
-        repeatMode: state.repeatMode,
-        shuffleEnabled: state.isShuffled,
-        equalizerPresetId: state.eqPreset,
-        customEQGains: state.eqGains,
+      
+      // 1. Randomize accents on first mount (Client side only to avoid hydration mismatch)
+      const accentPositions = Array.from({ length: 5 }, () => ({
+        x: `${Math.random() * 100}%`,
+        y: `${Math.random() * 100}%`
+      }));
+      dispatch({ type: 'SET_ACCENT_COLORS', payload: { 
+        c1: state.accentColor, 
+        c2: state.accentColor2, 
+        c3: state.accentColor3, 
+        c4: state.accentColor4, 
+        c5: state.accentColor5, 
+        accentPositions 
+      } });
+
+      // 2. Load settings from DB
+      db.getSettings().then(settings => {
+        dispatch({ type: 'SET_VOLUME', payload: settings.volume });
+        dispatch({ type: 'SET_REPEAT', payload: settings.repeatMode });
+        dispatch({ type: 'SET_SHUFFLE', payload: settings.shuffleEnabled });
+        dispatch({ type: 'SET_EQ_PRESET', payload: { name: settings.equalizerPresetId, gains: settings.customEQGains } });
+        if (settings.dynamicBackgroundEnabled !== undefined) {
+          if (settings.dynamicBackgroundEnabled !== state.dynamicBackgroundEnabled) {
+            dispatch({ type: 'TOGGLE_DYNAMIC_BACKGROUND' });
+          }
+        }
+        if (audioRef.current) {
+          audioRef.current.volume = settings.volume;
+        }
       });
-    });
-  }, [state.volume, state.repeatMode, state.isShuffled, state.eqPreset, state.eqGains]);
+    }
+  }, []);
+
+  // Save settings when they change
+  useEffect(() => {
+    // We don't save on the very first load to avoid overwriting with defaults
+    // But we need another way to detect if we've finished loading
+    // For now, simple save logic
+    if (!isInitialLoad.current) {
+      db.getSettings().then(current => {
+        db.saveSettings({
+          ...current,
+          volume: state.volume,
+          repeatMode: state.repeatMode,
+          shuffleEnabled: state.isShuffled,
+          equalizerPresetId: state.eqPreset,
+          customEQGains: state.eqGains,
+          dynamicBackgroundEnabled: state.dynamicBackgroundEnabled
+        });
+      });
+    }
+  }, [state.volume, state.repeatMode, state.isShuffled, state.eqPreset, state.eqGains, state.dynamicBackgroundEnabled]);
 
   // Load and play audio for a song
   const loadSong = useCallback(
@@ -329,6 +483,75 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           album: song.album,
           artwork,
         });
+      }
+
+      // Extract accent color from cover art
+      if (song.hasCoverArt) {
+        const coverArt = await db.getSongCoverArt(song.id);
+        if (coverArt) {
+          const url = URL.createObjectURL(coverArt);
+          const img = new Image();
+          img.src = url;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            
+            canvas.width = 64; 
+            canvas.height = 64;
+            ctx.drawImage(img, 0, 0, 64, 64);
+            
+            const data = ctx.getImageData(0, 0, 64, 64).data;
+            
+            const extractFromRegion = (xStart: number, yStart: number, size: number) => {
+              let r = 0, g = 0, b = 0, count = 0;
+              for (let y = yStart; y < yStart + size; y++) {
+                for (let x = xStart; x < xStart + size; x++) {
+                  const i = (y * 64 + x) * 4;
+                  const sr = data[i], sg = data[i+1], sb = data[i+2];
+                  const brightness = (sr + sg + sb) / 3;
+                  const saturation = Math.max(sr, sg, sb) - Math.min(sr, sg, sb);
+                  if (brightness > 30 && brightness < 230 && saturation > 20) {
+                    r += sr; g += sg; b += sb; count++;
+                  }
+                }
+              }
+              if (count > 0) {
+                return `#${Math.floor(r/count).toString(16).padStart(2, '0')}${Math.floor(g/count).toString(16).padStart(2, '0')}${Math.floor(b/count).toString(16).padStart(2, '0')}`;
+              }
+              return null;
+            };
+
+            const c1 = extractFromRegion(16, 16, 32) || (song.mood ? MOOD_CONFIG[song.mood].color : '#8b5cf6');
+            const c2 = extractFromRegion(0, 0, 32) || c1;
+            const c3 = extractFromRegion(32, 32, 32) || c1;
+            const c4 = extractFromRegion(32, 0, 32) || c2;
+            const c5 = extractFromRegion(0, 32, 32) || c3;
+
+            const accentPositions = Array.from({ length: 5 }, () => ({
+              x: `${Math.random() * 100}%`,
+              y: `${Math.random() * 100}%`
+            }));
+
+            dispatch({ type: 'SET_ACCENT_COLORS', payload: { c1, c2, c3, c4, c5, accentPositions } });
+            URL.revokeObjectURL(url);
+          };
+        }
+      } else if (song.mood) {
+        const c1 = MOOD_CONFIG[song.mood].color;
+        const accentPositions = [
+          { x: `${Math.random() * 80}%`, y: `${Math.random() * 80}%` },
+          { x: `${Math.random() * 80 + 20}%`, y: `${Math.random() * 80 + 20}%` },
+          { x: `${Math.random() * 100}%`, y: `${Math.random() * 100}%` }
+        ];
+        dispatch({ type: 'SET_ACCENT_COLORS', payload: { c1, c2: c1, c3: c1, c4: c1, c5: c1, accentPositions } });
+      } else {
+        const accentPositions = [
+          { x: '10%', y: '10%' },
+          { x: '90%', y: '90%' },
+          { x: '80%', y: '20%' }
+        ];
+        dispatch({ type: 'SET_ACCENT_COLORS', payload: { c1: '#8b5cf6', c2: '#ec4899', c3: '#6366f1', c4: '#10b981', c5: '#f59e0b', accentPositions } });
       }
     },
     [ensureAudioContext]
@@ -518,6 +741,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_EQ_PRESET', payload: { name, gains } });
   }, []);
 
+  const setAccentColor = useCallback((color: string | { c1: string; c2: string; c3: string; c4: string; c5: string }) => {
+    const accentPositions = Array.from({ length: 5 }, () => ({
+      x: `${Math.random() * 100}%`,
+      y: `${Math.random() * 100}%`
+    }));
+    if (typeof color === 'string') {
+      dispatch({ type: 'SET_ACCENT_COLORS', payload: { c1: color, c2: color, c3: color, c4: color, c5: color, accentPositions } });
+    } else {
+      dispatch({ type: 'SET_ACCENT_COLORS', payload: { ...color, accentPositions } });
+    }
+  }, []);
+
+  const toggleDynamicBackground = useCallback(() => {
+    dispatch({ type: 'TOGGLE_DYNAMIC_BACKGROUND' });
+  }, []);
+
   // Audio event listeners
   useEffect(() => {
     const audio = audioRef.current;
@@ -623,6 +862,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     shuffleByMood,
     setEqBand,
     setEqPreset,
+    setAccentColor,
+    toggleDynamicBackground,
   };
 
   return (

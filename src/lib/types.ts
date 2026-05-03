@@ -67,6 +67,7 @@ export interface Song {
   audioFeatures: AudioFeatures | null;
   analyzed: boolean;
   lyrics?: LyricSegment[];
+  source?: 'upload' | 'youtube';
 }
 
 // Song metadata without blobs (for lists/display)
@@ -87,6 +88,7 @@ export interface SongMeta {
   analyzed: boolean;
   hasCoverArt: boolean;
   hasLyrics?: boolean;
+  source?: 'upload' | 'youtube';
 }
 
 // --- Playlist ---
@@ -115,6 +117,13 @@ export interface PlayerState {
   repeatMode: RepeatMode;
   isShuffled: boolean;
   isFullPlayerOpen: boolean;
+  accentColor: string;
+  accentColor2: string;
+  accentColor3: string;
+  accentColor4: string;
+  accentColor5: string;
+  accentPositions: { x: string; y: string }[];
+  dynamicBackgroundEnabled: boolean;
 }
 
 // --- Equalizer ---
@@ -170,6 +179,8 @@ export interface AppSettings {
   visualizerMode: VisualizerMode;
   viewMode: 'grid' | 'list';
   libraryOrder?: string[];
+  storageLimit: number; // in GB, 0 = browser-controlled
+  dynamicBackgroundEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -182,6 +193,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   shuffleEnabled: false,
   visualizerMode: 'bars',
   viewMode: 'list',
+  storageLimit: 0,
+  dynamicBackgroundEnabled: true,
 };
 
 // --- Analysis Status ---
@@ -198,7 +211,7 @@ export interface AnalysisState {
 }
 
 // --- Toast ---
-export type ToastType = 'success' | 'error' | 'info' | 'warning';
+export type ToastType = 'success' | 'error' | 'info' | 'warning' | 'favorite' | 'playlist' | 'mood' | 'download';
 
 export interface Toast {
   id: string;

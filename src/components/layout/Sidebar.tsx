@@ -19,6 +19,7 @@ import {
 import { useState } from 'react';
 import { MOOD_CONFIG, ALL_MOODS } from '@/lib/types';
 import { useLibrary } from '@/contexts/LibraryContext';
+import SidebarPlaylistItem from './SidebarPlaylistItem';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Library', icon: Music },
@@ -26,7 +27,8 @@ const NAV_ITEMS = [
   { href: '/favorites', label: 'Favorites', icon: Heart },
   { href: '/queue', label: 'Queue', icon: ListOrdered },
   { href: '/moods', label: 'Smart Moods', icon: Brain },
-  { href: '/youtube', label: 'YouTube DL', icon: Download },
+  { href: '/youtube', label: 'YouTube to Lib', icon: Download },
+  { href: '/youtube-to-mp3', label: 'YouTube to MP3', icon: Disc3 },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -43,7 +45,7 @@ export default function Sidebar() {
     >
       {/* Subtle ambient glow */}
       <div className="absolute top-0 left-0 w-32 h-32 bg-accent/5 rounded-full blur-[60px] pointer-events-none" />
-      <div className="absolute bottom-20 right-0 w-24 h-24 bg-pink-500/5 rounded-full blur-[50px] pointer-events-none" />
+      <div className="absolute bottom-20 right-0 w-24 h-24 bg-accent/5 rounded-full blur-[50px] pointer-events-none" />
 
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-border/50 relative z-10">
@@ -52,7 +54,7 @@ export default function Sidebar() {
           <div className="absolute inset-0 w-7 h-7 bg-accent/20 rounded-full blur-md" />
         </div>
         {!collapsed && (
-          <h1 className="text-lg font-bold bg-gradient-to-r from-accent via-purple-400 to-pink-500 bg-clip-text text-transparent">
+          <h1 className="text-lg font-bold bg-gradient-to-r from-accent to-accent/60 bg-clip-text text-transparent transition-all duration-1000">
             Star Player
           </h1>
         )}
@@ -76,26 +78,20 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-1000 group
                 ${
                   isActive
-                    ? 'bg-gradient-to-r from-accent/15 to-pink-500/10 text-accent shadow-[inset_0_0_20px_rgba(139,92,246,0.08)]'
+                    ? 'bg-gradient-to-r from-accent/15 to-accent/5 text-accent'
                     : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary'
                 }`}
               title={collapsed ? item.label : undefined}
             >
-              {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-accent to-pink-500" />
-              )}
               <Icon
                 className={`w-5 h-5 flex-shrink-0 transition-all duration-200 ${
-                  isActive ? 'text-accent drop-shadow-[0_0_6px_rgba(139,92,246,0.5)]' : 'text-text-muted group-hover:text-text-primary'
+                  isActive ? 'text-accent' : 'text-text-muted group-hover:text-text-primary'
                 }`}
               />
               {!collapsed && <span>{item.label}</span>}
-              {isActive && !collapsed && (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(139,92,246,0.9)]" />
-              )}
             </Link>
           );
         })}
@@ -137,15 +133,7 @@ export default function Sidebar() {
               </p>
             </div>
             {playlists.slice(0, 5).map((pl) => (
-              <Link
-                key={pl.id}
-                href={`/playlists/${pl.id}`}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-all truncate"
-              >
-                <ListMusic className="w-4 h-4 text-text-muted flex-shrink-0" />
-                <span className="truncate">{pl.name}</span>
-                <span className="ml-auto text-[10px] text-text-muted font-medium bg-surface px-2 py-0.5 rounded-full">{pl.songIds.length}</span>
-              </Link>
+              <SidebarPlaylistItem key={pl.id} playlist={pl} />
             ))}
           </>
         )}

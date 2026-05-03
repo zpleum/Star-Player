@@ -18,6 +18,7 @@ import {
   Shuffle,
   ChevronUp,
   Music2,
+  Heart,
 } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
 
@@ -26,13 +27,16 @@ import Equalizer from './Equalizer';
 export default function BottomPlayer() {
   const { state, togglePlay, next, prev, seek, setVolume, toggleMute, cycleRepeat, toggleShuffle, setFullPlayer } =
     usePlayer();
-  const { getCoverArtUrl } = useLibrary();
+  const { songs, toggleFavorite, getCoverArtUrl } = useLibrary();
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [isEqOpen, setIsEqOpen] = useState(false);
   const seekBarRef = useRef<HTMLDivElement>(null);
   const [isSeeking, setIsSeeking] = useState(false);
 
   const { currentSong, isPlaying, currentTime, duration, volume, isMuted, repeatMode, isShuffled } = state;
+
+  const currentSongFromLibrary = songs.find(s => s.id === currentSong?.id);
+  const isFavorite = currentSongFromLibrary?.favorite || false;
 
   useEffect(() => {
     if (currentSong) {
@@ -91,12 +95,12 @@ export default function BottomPlayer() {
         onMouseDown={handleSeekMouseDown}
       >
         <div
-          className={`absolute inset-y-0 left-0 bg-gradient-to-r from-accent via-purple-400 to-pink-500 ${isSeeking ? '' : 'transition-[width] duration-100'}`}
+          className={`absolute inset-y-0 left-0 bg-gradient-to-r from-accent to-accent/60 ${isSeeking ? '' : 'transition-[width] duration-100'}`}
           style={{ width: `${progress}%` }}
         />
         {/* Glow at the tip */}
         <div
-          className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-accent shadow-[0_0_12px_rgba(139,92,246,0.8)] transition-opacity ${isSeeking ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          className="absolute top-1/2 w-3 h-3 rounded-full bg-accent opacity-100 shadow-md ring-2 ring-background/50 pointer-events-none"
           style={{ left: `${progress}%`, transform: `translate(-50%, -50%)` }}
         />
       </div>
@@ -105,7 +109,7 @@ export default function BottomPlayer() {
         {/* Song info */}
         <div className="flex items-center gap-3 w-[280px] min-w-0">
           <div
-            className="w-12 h-12 rounded-lg bg-surface flex-shrink-0 overflow-hidden flex items-center justify-center cursor-pointer group/cover relative shadow-lg"
+            className="w-12 h-12 rounded-lg bg-surface flex-shrink-0 overflow-hidden flex items-center justify-center cursor-pointer group/cover relative"
             onClick={() => setFullPlayer(true)}
           >
             {coverUrl ? (
@@ -118,7 +122,7 @@ export default function BottomPlayer() {
               <ChevronUp className="w-4 h-4 text-white" />
             </div>
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-text-primary truncate">
               {currentSong?.title || 'No song playing'}
             </p>
@@ -134,7 +138,7 @@ export default function BottomPlayer() {
             <button
               onClick={toggleShuffle}
               className={`p-1.5 rounded-lg transition-all duration-200 ${
-                isShuffled ? 'text-accent drop-shadow-[0_0_6px_rgba(139,92,246,0.5)]' : 'text-text-muted hover:text-text-primary'
+                isShuffled ? 'text-accent' : 'text-text-muted hover:text-text-primary'
               }`}
               title="Shuffle"
             >
@@ -149,7 +153,7 @@ export default function BottomPlayer() {
             </button>
             <button
               onClick={togglePlay}
-              className="p-3 rounded-full bg-gradient-to-br from-accent to-purple-600 hover:from-accent-hover hover:to-purple-500 text-white shadow-[0_0_24px_rgba(139,92,246,0.5)] hover:shadow-[0_0_36px_rgba(139,92,246,0.7)] transition-all duration-200 active:scale-95"
+              className="p-3 rounded-full bg-accent hover:bg-accent-hover text-white transition-all duration-200 active:scale-95"
               title={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
@@ -164,7 +168,7 @@ export default function BottomPlayer() {
             <button
               onClick={cycleRepeat}
               className={`p-1.5 rounded-lg transition-all duration-200 ${
-                repeatMode !== 'off' ? 'text-accent drop-shadow-[0_0_6px_rgba(139,92,246,0.5)]' : 'text-text-muted hover:text-text-primary'
+                repeatMode !== 'off' ? 'text-accent' : 'text-text-muted hover:text-text-primary'
               }`}
               title={`Repeat: ${repeatMode}`}
             >
@@ -179,7 +183,21 @@ export default function BottomPlayer() {
         </div>
 
         {/* Volume + eq + expand */}
-        <div className="flex items-center gap-3 w-[240px] justify-end">
+        <div className="flex items-center gap-3 w-[280px] justify-end">
+          {currentSong && (
+            <button
+              onClick={() => toggleFavorite(currentSong.id)}
+              className={`p-1.5 rounded-lg transition-all duration-300 ${
+                isFavorite 
+                  ? 'text-pink-500' 
+                  : 'text-text-muted hover:text-text-primary hover:bg-surface'
+              }`}
+              title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+            </button>
+          )}
+
           <button
             onClick={() => setIsEqOpen(!isEqOpen)}
             className={`p-1.5 rounded-lg transition-all duration-200 ${

@@ -31,7 +31,7 @@ export default function Equalizer({ onClose, variant = 'popover' }: EqualizerPro
   return (
     <div className={`flex flex-col gap-6 ${
       variant === 'popover' 
-        ? 'bg-surface/90 backdrop-blur-3xl rounded-3xl border border-border shadow-2xl p-6 w-full max-w-lg mx-auto'
+        ? 'bg-surface/90 backdrop-blur-3xl rounded-3xl border border-border p-6 w-full max-w-lg mx-auto'
         : 'w-full h-full flex-1 p-2'
     }`}>
       <div className="flex items-center justify-between">
@@ -67,7 +67,7 @@ export default function Equalizer({ onClose, variant = 'popover' }: EqualizerPro
           {isDropdownOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
-              <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                 {EQ_PRESETS.map((p) => (
                   <button
                     key={p.name}
@@ -118,9 +118,9 @@ export default function Equalizer({ onClose, variant = 'popover' }: EqualizerPro
                 step="0.1"
                 value={eqGains[idx] || 0}
                 onChange={(e) => setEqBand(idx, parseFloat(e.target.value))}
-                className="absolute w-40 h-1.5 -rotate-90 origin-center top-20 bg-surface rounded-full appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(139,92,246,0.5)]"
+                className="absolute w-40 h-1.5 -rotate-90 origin-center top-20 bg-surface rounded-full appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent"
                 style={{
-                  background: `linear-gradient(to right, rgba(139,92,246,0.2) 0%, rgba(139,92,246,0.8) ${(Number(eqGains[idx] || 0) + 12) / 24 * 100}%, #1f2937 ${(Number(eqGains[idx] || 0) + 12) / 24 * 100}%, #1f2937 100%)`
+                  background: `linear-gradient(to right, rgba(var(--accent-rgb),0.1) 0%, var(--accent) ${(Number(eqGains[idx] || 0) + 12) / 24 * 100}%, #1f2937 ${(Number(eqGains[idx] || 0) + 12) / 24 * 100}%, #1f2937 100%)`
                 }}
               />
             </div>

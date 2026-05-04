@@ -7,7 +7,7 @@ import { useLibrary } from '@/contexts/LibraryContext';
 import { formatTime } from '@/lib/utils';
 import { MOOD_CONFIG, type SongMeta, type MoodCategory } from '@/lib/types';
 import {
-  Play, Pause, Heart, MoreVertical, Plus, Trash2, ListPlus, Music2, GripVertical, Video, Brain
+  Play, Pause, Heart, MoreVertical, Plus, Trash2, ListPlus, Music2, GripVertical, Video, Brain, MoreHorizontal
 } from 'lucide-react';
 import { useAudioAnalysis } from '@/hooks/useAudioAnalysis';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -58,17 +58,17 @@ const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
     <div
       ref={ref}
       style={style}
-      className={`group relative grid grid-cols-[40px_1fr_1fr_80px_80px_80px_40px] gap-3 px-4 py-2.5 items-center rounded-lg cursor-pointer transition-all duration-150 ${
-        isCurrentSong ? 'bg-accent/10 text-accent' : 
-        isSelected ? 'bg-accent/20 border-accent/30' : 'hover:bg-surface-hover text-text-primary'
+      className={`group relative flex md:grid md:grid-cols-[40px_1fr_1fr_80px_80px_80px_40px] gap-3 px-4 py-2 md:py-2.5 items-center md:rounded-lg cursor-pointer transition-all duration-150 ${
+        isCurrentSong ? 'bg-accent/10 md:bg-accent/10 text-accent' : 
+        isSelected ? 'bg-accent/20 md:bg-accent/20 border-accent/30' : 'active:bg-surface-hover md:hover:bg-surface-hover text-text-primary'
       } ${isDragging && !isOverlay ? 'opacity-30 border border-transparent' : ''} ${
         isOverlay ? 'bg-surface-hover scale-[1.02] border border-accent/50 z-50 ring-1 ring-black/5' : ''
       }`}
       onClick={(e) => handlePlay(song, index, e)}
       onContextMenu={(e) => handleContextMenu(e, song)}
     >
-      {/* Number / play icon / drag handle */}
-      <div className="flex items-center justify-center">
+      {/* Number / EQ Animation / Drag Handle */}
+      <div className="flex w-10 md:w-full items-center justify-center flex-shrink-0">
         {isPlaying ? (
           <div className="flex items-end gap-[2px] h-4">
             <span className="w-[3px] bg-accent animate-eq-bar rounded-full" style={{ animationDelay: '0ms' }} />
@@ -76,52 +76,45 @@ const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
             <span className="w-[3px] bg-accent animate-eq-bar rounded-full" style={{ animationDelay: '300ms' }} />
           </div>
         ) : isSelectionMode ? (
-          <div 
-            className="flex items-center gap-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePlay(song, index, e);
-            }}
-          >
-            <div className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${
-              isSelected ? 'bg-accent border-accent text-white' : 'bg-surface border-border hover:border-accent'
-            }`}>
-              {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
-            </div>
-            <span className={`text-[10px] font-bold ${isSelected ? 'text-accent' : 'text-text-muted'}`}>
-              {index + 1}
-            </span>
+          <div className={`w-4 h-4 md:w-4 md:h-4 rounded border transition-colors flex items-center justify-center ${
+            isSelected ? 'bg-accent border-accent text-white' : 'bg-surface border-border hover:border-accent'
+          }`}>
+            {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
           </div>
         ) : onReorder ? (
           <div 
             {...listeners} 
             {...attributes}
-            className="flex items-center gap-1 cursor-grab active:cursor-grabbing"
+            className="flex items-center gap-1 cursor-grab active:cursor-grabbing text-text-muted hover:text-accent transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
-            <GripVertical className="w-3.5 h-3.5 opacity-40 group-hover:opacity-80" />
-            <span className="text-xs text-text-muted">{index + 1}</span>
+            <GripVertical className="w-4 h-4" />
+            <span className="text-sm font-medium">{index + 1}</span>
           </div>
         ) : (
           <div className="relative w-5 h-5 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <span className="text-sm text-text-muted group-hover:hidden">{index + 1}</span>
-            <Play className="w-4 h-4 text-accent hidden group-hover:block" />
+            <span className="text-sm text-text-muted md:group-hover:hidden">{index + 1}</span>
+            <Play className="w-4 h-4 text-accent hidden md:group-hover:block" />
           </div>
         )}
       </div>
 
-      {/* Title + cover */}
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="w-10 h-10 rounded-md bg-surface overflow-hidden flex-shrink-0 flex items-center justify-center">
+      {/* Main Content (Cover + Info) */}
+      <div className="flex-1 md:flex-none flex items-center gap-3 min-w-0">
+        <div className="w-12 h-12 md:w-10 md:h-10 rounded-[4px] md:rounded-md bg-surface overflow-hidden flex-shrink-0 flex items-center justify-center shadow-sm">
           {coverUrl ? (
             <img src={coverUrl} alt="" className="w-full h-full object-cover" />
           ) : (
             <Music2 className="w-4 h-4 text-text-muted" />
           )}
         </div>
-        <div className="min-w-0">
-          <p className={`text-sm font-medium truncate ${isCurrentSong ? 'text-accent' : ''}`}>
+        <div className="min-w-0 flex-1">
+          <p className={`text-[16px] md:text-sm font-medium truncate leading-tight md:leading-normal ${isCurrentSong ? 'text-accent' : ''}`}>
             {song.title}
+          </p>
+          {/* Mobile only artist below title */}
+          <p className="text-[13px] text-[#8e8e93] truncate leading-tight mt-0.5 md:hidden">
+            {song.artist}
           </p>
           {showMoodBadge && moodConfig && (
             <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full mt-0.5"
@@ -132,14 +125,14 @@ const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
         </div>
       </div>
 
-      {/* Artist / Album */}
-      <div className="min-w-0">
+      {/* Artist / Album (Desktop only column) */}
+      <div className="hidden md:block min-w-0">
         <p className="text-sm text-text-secondary truncate">{song.artist}</p>
         <p className="text-xs text-text-muted truncate">{song.album}</p>
       </div>
 
-      {/* Source */}
-      <div className="flex justify-center">
+      {/* Source (Desktop only column) */}
+      <div className="hidden md:flex justify-center">
         {song.source === 'youtube' ? (
           <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[9px] font-bold border border-red-500/20">
             <Video className="w-2.5 h-2.5" />
@@ -153,27 +146,34 @@ const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
         )}
       </div>
 
-      {/* BPM */}
-      {showBpm ? (
-        <div className="text-center text-xs text-text-muted">
-          {song.bpm || '—'}
-        </div>
-      ) : <div />}
+      {/* BPM (Desktop only column) */}
+      <div className="hidden md:block text-center text-xs text-text-muted">
+        {showBpm ? (song.bpm || '—') : ''}
+      </div>
 
-      {/* Duration */}
-      <div className="text-right text-sm text-text-muted">
+      {/* Duration (Desktop only column) */}
+      <div className="hidden md:block text-right text-sm text-text-muted">
         {formatTime(song.duration)}
       </div>
 
       {/* Actions */}
-      <div className={`flex items-center gap-1 transition-opacity ${song.favorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-1 ml-auto" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={() => toggleFavorite(song.id)}
           className={`p-1 transition-colors ${song.favorite ? 'text-pink-500' : 'text-text-muted hover:text-pink-500'}`}
         >
           <Heart className={`w-3.5 h-3.5 ${song.favorite ? 'fill-current' : ''}`} />
         </button>
+        <button
+          onClick={(e) => handleContextMenu(e, song)}
+          className="p-1 text-text-muted hover:text-text-primary md:hidden"
+        >
+          <MoreHorizontal className="w-5 h-5" />
+        </button>
       </div>
+
+      {/* Subtle border for Apple Music look on mobile */}
+      <div className="absolute bottom-0 left-20 right-0 h-[0.5px] bg-white/[0.05] md:hidden" />
     </div>
   );
 });
@@ -316,10 +316,32 @@ export default function SongList({
   const handleContextMenu = (e: React.MouseEvent, song: SongMeta) => {
     e.preventDefault();
     e.stopPropagation();
+    
     if (!selectedIds.has(song.id) && !e.ctrlKey && !e.metaKey) {
       toggleSelection(song.id, false);
     }
-    setContextMenu({ x: e.clientX, y: e.clientY, song });
+    
+    // Position menu near cursor
+    let x = e.clientX;
+    let y = e.clientY;
+    
+    // Ensure menu stays within window bounds with padding
+    const menuWidth = 220; 
+    const menuHeight = 400; 
+    const padding = 16;
+
+    if (x + menuWidth + padding > window.innerWidth) {
+      x = window.innerWidth - menuWidth - padding;
+    }
+    if (y + menuHeight + padding > window.innerHeight) {
+      y = window.innerHeight - menuHeight - padding;
+    }
+    
+    // Ensure it doesn't go negative
+    x = Math.max(padding, x);
+    y = Math.max(padding, y);
+    
+    setContextMenu({ x, y, song });
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -344,9 +366,10 @@ export default function SongList({
 
   if (songs.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-text-muted h-full">
-        <Music2 className="w-16 h-16 mb-4 opacity-30" />
-        <p className="text-lg">{emptyMessage}</p>
+      <div className="flex-1 flex flex-col items-center justify-center py-20 px-6 text-text-muted text-center">
+        <Music2 className="w-16 h-16 mb-4 opacity-20" />
+        <p className="text-lg font-medium text-text-primary">{emptyMessage}</p>
+        <p className="text-sm mt-2 opacity-60">Try adding some tracks to get started.</p>
       </div>
     );
   }
@@ -368,8 +391,8 @@ export default function SongList({
 
   return (
     <>
-      {/* Header row */}
-      <div className="grid grid-cols-[40px_1fr_1fr_80px_80px_80px_40px] gap-3 px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider border-b border-border">
+      {/* Header row (Desktop only) */}
+      <div className="hidden md:grid grid-cols-[40px_1fr_1fr_80px_80px_80px_40px] gap-3 px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider border-b border-border">
         <span className="text-center">#</span>
         <span>Title</span>
         <span>Artist / Album</span>
@@ -380,7 +403,7 @@ export default function SongList({
       </div>
 
       {/* Song rows */}
-      <div className="flex flex-col pb-10">
+      <div className="flex flex-col">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

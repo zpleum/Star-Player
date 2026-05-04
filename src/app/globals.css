@@ -254,3 +254,44 @@ input[type="range"]::-moz-range-thumb {
   background: rgba(139, 92, 246, 0.3);
   color: #f0f2f8;
 }
+
+/* ---- Mobile Safe Area (for notch devices) ---- */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ---- Mobile touch improvements ---- */
+/* ---- Marquee Animation ---- */
+.marquee-container {
+  overflow: hidden;
+  white-space: nowrap;
+  mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+  width: 100%;
+}
+
+.animate-marquee {
+  display: inline-block;
+  animation: marquee-scroll var(--marquee-duration, 10s) linear infinite;
+  padding-left: 5%;
+  padding-right: 5%;
+}
+
+@keyframes marquee-scroll {
+  0%, 15% { transform: translateX(0); }
+  85%, 100% { transform: translateX(var(--marquee-end-x, 0px)); }
+}
+
+@media (max-width: 767px) {
+  /* Prevent text selection on interactive elements */
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+  
+  /* Larger scrollbar for touch */
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+}

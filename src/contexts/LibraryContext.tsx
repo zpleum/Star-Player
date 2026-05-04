@@ -5,6 +5,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { SongMeta, Playlist, MoodCategory, Toast, ToastType } from '@/lib/types';
 import * as db from '@/lib/db';
+import { API_BASE_URL } from '@/lib/constants';
 import { v4 as uuidv4 } from 'uuid';
 
 interface LibraryContextValue {
@@ -29,6 +30,7 @@ interface LibraryContextValue {
   removeSongFromPlaylist: (playlistId: string, songId: string) => Promise<void>;
   reorderPlaylistSongs: (playlistId: string, startIndex: number, endIndex: number) => Promise<void>;
   reorderLibrarySongs: (startIndex: number, endIndex: number) => Promise<void>;
+  reorderFavoriteSongs: (startIndex: number, endIndex: number) => Promise<void>;
 
   // Import
   importFiles: (files: FileList | File[]) => Promise<void>;
@@ -215,6 +217,22 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const reorderFavoriteSongs = useCallback(async (startIndex: number, endIndex: number) => {
+    const favoriteSongs = songs.filter(s => s.favorite);
+    const songToMove = favoriteSongs[startIndex];
+    const targetSong = favoriteSongs[endIndex];
+    
+    if (!songToMove || !targetSong) return;
+    
+    // Find their indices in the global songs array
+    const globalStartIndex = songs.findIndex(s => s.id === songToMove.id);
+    const globalEndIndex = songs.findIndex(s => s.id === targetSong.id);
+    
+    if (globalStartIndex === -1 || globalEndIndex === -1) return;
+    
+    await reorderLibrarySongs(globalStartIndex, globalEndIndex);
+  }, [songs, reorderLibrarySongs]);
+
   const refreshPlaylists = useCallback(async () => {
     const playlistsData = await db.getAllPlaylists();
     setPlaylists(playlistsData);
@@ -385,7 +403,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const fetchLyricsSilent = useCallback(
     async (songId: string, title: string, artist: string) => {
       try {
-        const response = await fetch('/api/lyrics', {
+        const response = await fetch(`${API_BASE_URL}/api/lyrics`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title, artist }),
@@ -426,7 +444,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const fetchCoverArtSilent = useCallback(
     async (songId: string, title: string, artist: string) => {
       try {
-        const response = await fetch('/api/cover', {
+        const response = await fetch(`${API_BASE_URL}/api/cover`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title, artist }),
@@ -458,7 +476,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       try {
         if (!song) throw new Error('Song not found');
 
-        const response = await fetch('/api/lyrics', {
+        const response = await fetch(`${API_BASE_URL}/api/lyrics`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -601,6 +619,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     removeSongFromPlaylist,
     reorderPlaylistSongs,
     reorderLibrarySongs,
+    reorderFavoriteSongs,
     importFiles,
     importing,
     importProgress,

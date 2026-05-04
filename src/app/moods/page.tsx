@@ -34,7 +34,7 @@ export default function MoodsPage() {
         }}
       />
 
-      <div className="flex-1 overflow-y-auto p-8 relative z-10">
+      <div className="flex-1 overflow-y-auto p-8 pb-32 md:pb-8 relative z-10">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-end justify-between mb-8">
             <div>
@@ -90,7 +90,7 @@ export default function MoodsPage() {
 
                       <div className="flex items-center gap-2">
                         <Link
-                          href={`/moods/${encodeURIComponent(mood)}`}
+                          href={`/moods/view?mood=${encodeURIComponent(mood)}`}
                           className="flex-1 flex justify-center items-center gap-2 py-2.5 bg-surface/80 hover:bg-surface border border-border rounded-xl text-sm font-medium text-text-primary transition-colors backdrop-blur-md"
                         >
                           <Play className="w-4 h-4" />

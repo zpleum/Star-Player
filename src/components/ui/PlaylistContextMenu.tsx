@@ -108,7 +108,7 @@ export default function PlaylistContextMenu() {
 
           <button
             onClick={() => {
-              router.push(`/playlists/${targetPlaylistId}`);
+              router.push(`/playlists/view?id=${targetPlaylistId}`);
               setVisible(false);
             }}
             className="w-full flex items-center gap-3 px-3 py-2 text-sm text-text-primary hover:bg-surface-hover transition-colors rounded-lg mx-1"

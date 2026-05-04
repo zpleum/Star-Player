@@ -42,18 +42,30 @@ export default function LyricsView({
 
   // Auto-scroll active line smoothly via CSS translate
   useEffect(() => {
-    if (activeLineRef.current && scrollRef.current) {
-      const containerHeight = scrollRef.current.clientHeight;
-      const lineOffsetTop = activeLineRef.current.offsetTop;
-      const lineHeight = activeLineRef.current.clientHeight;
-      
-      const targetY = (containerHeight / 2) - lineOffsetTop - (lineHeight / 2);
-      setTranslateY(targetY);
-    } else if (activeIndex === -1 && scrollRef.current) {
-      const containerHeight = scrollRef.current.clientHeight;
-      setTranslateY(containerHeight / 3); // Start slightly down before first line
+    const updateScroll = () => {
+      if (activeLineRef.current && scrollRef.current) {
+        const containerHeight = scrollRef.current.clientHeight;
+        const lineOffsetTop = activeLineRef.current.offsetTop;
+        const lineHeight = activeLineRef.current.clientHeight;
+        
+        const targetY = (containerHeight / 2) - lineOffsetTop - (lineHeight / 2);
+        setTranslateY(targetY);
+      } else if (activeIndex === -1 && scrollRef.current) {
+        const containerHeight = scrollRef.current.clientHeight;
+        setTranslateY(containerHeight / 3); // Start slightly down before first line
+      }
+    };
+
+    updateScroll();
+
+    if (scrollRef.current) {
+      const resizeObserver = new ResizeObserver(() => {
+        updateScroll();
+      });
+      resizeObserver.observe(scrollRef.current);
+      return () => resizeObserver.disconnect();
     }
-  }, [activeIndex]);
+  }, [activeIndex, lyrics]);
 
   if (!songId) return null;
 
@@ -144,7 +156,7 @@ export default function LyricsView({
         }}
       >
         <div 
-          className="relative flex flex-col items-center text-center gap-8 px-6 transition-transform duration-[800ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+          className="relative flex flex-col items-start text-left gap-8 px-8 transition-transform duration-[800ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]"
           style={{ transform: `translateY(${translateY}px)` }}
         >
           {lyrics && lyrics.map((line, i) => {
@@ -154,12 +166,17 @@ export default function LyricsView({
               <div
                 key={i}
                 ref={isActive ? activeLineRef : null}
-                className="transition-all duration-700 ease-out will-change-transform"
+                className="transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] will-change-transform"
                 style={{
                   fontSize: '2.25rem',
-                  fontWeight: isActive ? 800 : 600,
-                  color: isActive ? 'white' : 'rgba(255,255,255,0.2)',
-                  lineHeight: 1.4,
+                  fontWeight: 800,
+                  color: 'white',
+                  opacity: isActive ? 1 : 0.25,
+                  filter: isActive ? 'blur(0px)' : 'blur(1.5px)',
+                  transform: isActive ? 'scale(1)' : 'scale(0.9)',
+                  transformOrigin: 'left center',
+                  lineHeight: 1.3,
+                  textShadow: isActive ? '0 4px 20px rgba(0,0,0,0.5)' : 'none'
                 }}
               >
                 {line.text}

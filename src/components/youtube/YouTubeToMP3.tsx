@@ -4,6 +4,7 @@
 // ============================================================
 import { useState, useRef } from 'react';
 import { useLibrary } from '@/contexts/LibraryContext';
+import { API_BASE_URL } from '@/lib/constants';
 import { Download, Video, Loader2, Search, CheckCircle2, AlertCircle, Link, List, X, Plus } from 'lucide-react';
 
 interface VideoInfo {
@@ -59,7 +60,7 @@ export default function YouTubeToMP3() {
     setSuccess(false);
 
     try {
-      const res = await fetch(`/api/youtube/info?url=${encodeURIComponent(url)}`);
+      const res = await fetch(`${API_BASE_URL}/api/youtube/info?url=${encodeURIComponent(url)}`);
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Failed to fetch video info');
@@ -103,7 +104,7 @@ export default function YouTubeToMP3() {
     const taskId = Math.random().toString(36).substring(7);
     const progressInterval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/youtube/progress?taskId=${taskId}`);
+        const res = await fetch(`${API_BASE_URL}/api/youtube/progress?taskId=${taskId}`);
         if (res.ok) {
           const data = await res.json();
           if (data.progress > 0) setProgress(data.progress);
@@ -112,7 +113,7 @@ export default function YouTubeToMP3() {
     }, 1000);
 
     try {
-      const res = await fetch('/api/youtube/download', {
+      const res = await fetch(`${API_BASE_URL}/api/youtube/download`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, taskId }),
@@ -187,7 +188,7 @@ export default function YouTubeToMP3() {
 
   const fetchBatchInfo = async (item: BatchItem): Promise<VideoInfo | null> => {
     try {
-      const res = await fetch(`/api/youtube/info?url=${encodeURIComponent(item.url)}`);
+      const res = await fetch(`${API_BASE_URL}/api/youtube/info?url=${encodeURIComponent(item.url)}`);
       if (!res.ok) throw new Error('Failed');
       const data = await res.json();
       return { title: data.title, thumbnail: data.thumbnail, duration: data.duration };
@@ -200,7 +201,7 @@ export default function YouTubeToMP3() {
     const taskId = Math.random().toString(36).substring(7);
     const progressInterval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/youtube/progress?taskId=${taskId}`);
+        const res = await fetch(`${API_BASE_URL}/api/youtube/progress?taskId=${taskId}`);
         if (res.ok) {
           const data = await res.json();
           if (data.progress > 0) {
@@ -211,7 +212,7 @@ export default function YouTubeToMP3() {
     }, 1000);
 
     try {
-      const res = await fetch('/api/youtube/download', {
+      const res = await fetch(`${API_BASE_URL}/api/youtube/download`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: item.url, taskId }),
@@ -273,7 +274,7 @@ export default function YouTubeToMP3() {
   };
 
   return (
-    <div className="w-full p-20">
+    <div className="w-full md:p-20 p-8">
       <div className="">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">

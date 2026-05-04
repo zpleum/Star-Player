@@ -20,6 +20,57 @@ import LyricsView from './LyricsView';
 import * as db from '@/lib/db';
 import type { LyricSegment } from '@/lib/types';
 
+// Helper component for scrolling long text
+function MarqueeText({ text, className }: { text: string; className?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+  const [scrollX, setScrollX] = useState(0);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      setTimeout(() => {
+        if (containerRef.current && textRef.current) {
+          const containerWidth = containerRef.current.offsetWidth;
+          const textWidth = textRef.current.scrollWidth;
+          if (textWidth > containerWidth) {
+            setShouldAnimate(true);
+            setScrollX(containerWidth - textWidth - 40); // 40px buffer
+          } else {
+            setShouldAnimate(false);
+          }
+        }
+      }, 100);
+    };
+    
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [text]);
+
+  return (
+    <div 
+      ref={containerRef} 
+      className={`marquee-container w-full ${className?.includes('text-center') ? 'text-center' : ''}`}
+    >
+      <span
+        ref={textRef}
+        className={`${className} ${shouldAnimate ? 'animate-marquee' : ''}`}
+        style={{
+          display: 'inline-block',
+          width: 'max-content',
+          ...(shouldAnimate ? {
+            '--marquee-end-x': `${scrollX}px`, 
+            '--marquee-duration': `${Math.max(8, Math.abs(scrollX) / 30)}s`,
+          } : {})
+        } as React.CSSProperties}
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
+
 export default function FullPlayer() {
   const { state, togglePlay, next, prev, seek, setVolume, toggleMute, cycleRepeat, toggleShuffle, setFullPlayer } = usePlayer();
   const { getCoverArtUrl, toggleFavorite, songs, generateLyrics } = useLibrary();
@@ -120,6 +171,9 @@ export default function FullPlayer() {
     setIsGeneratingLyrics(true);
     try {
       await generateLyrics(currentSong.id);
+      // Explicitly reload lyrics from DB after generation
+      const updatedSong = await db.getSong(currentSong.id);
+      setCurrentLyrics(updatedSong?.lyrics);
     } finally {
       setIsGeneratingLyrics(false);
     }
@@ -201,66 +255,96 @@ export default function FullPlayer() {
       </div>
 
       {/* Main content wrapper */}
-      <div className={`flex-1 flex flex-col w-full px-6 relative z-10 pb-8 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isEqOpen ? 'md:-translate-x-[210px]' : ''}`}>
+      <div className={`flex-1 flex flex-col w-full px-6 relative z-10 pb-4 md:pb-8 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isEqOpen ? 'md:-translate-x-[210px]' : ''} min-h-0`}>
         
         {/* Top Split Area */}
         <div className={`flex-1 flex ${isLyricsOpen ? 'flex-col md:flex-row max-w-7xl items-center' : 'flex-col justify-center max-w-3xl items-center'} w-full mx-auto gap-8 md:gap-16 transition-all duration-500 min-h-0`}>
           
           {/* Left Side: Original Player UI */}
-          <div className={`flex flex-col items-center justify-center gap-6 transition-all duration-500 ${isLyricsOpen ? 'w-full md:w-1/2 flex-shrink-0' : 'w-full'}`}>
-            <div className="relative group">
-              <div className={`transition-all duration-500 ${isLyricsOpen ? 'w-64 h-64 md:w-80 md:h-80' : 'w-72 h-72 md:w-80 md:h-80'} rounded-3xl overflow-hidden ring-1 ring-white/5`}>
-                {coverUrl ? (
-                  <img src={coverUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                ) : (
-                  <div className="w-full h-full bg-surface flex items-center justify-center">
-                    <Music2 className="w-20 h-20 text-text-muted/30" />
+          <div className={`flex flex-col items-center transition-all duration-500 ${isLyricsOpen ? 'w-full h-full min-h-0 md:h-auto justify-between md:justify-center md:w-1/2 flex-shrink-0 gap-2 md:gap-6' : 'w-full justify-center gap-6'}`}>
+            
+            {/* Top Block: Cover + Info */}
+            <div className={`flex w-full transition-all duration-500 ${isLyricsOpen ? 'flex-row md:flex-col items-center gap-4 md:gap-6 flex-shrink-0 px-2 md:px-0' : 'flex-col items-center gap-6 justify-center'}`}>
+              <div className="relative group flex-shrink-0">
+                <div className={`transition-all duration-500 ${isLyricsOpen ? 'w-16 h-16 md:w-80 md:h-80 rounded-2xl md:rounded-3xl' : 'w-72 h-72 md:w-80 md:h-80 rounded-3xl'} overflow-hidden ring-1 ring-white/5`}>
+                  {coverUrl ? (
+                    <img src={coverUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  ) : (
+                    <div className="w-full h-full bg-surface flex items-center justify-center">
+                      <Music2 className="w-20 h-20 text-text-muted/30" />
+                    </div>
+                  )}
+                </div>
+                {/* Glow under album art */}
+                {coverUrl && !isLyricsOpen && (
+                  <div className="absolute -bottom-6 left-8 right-8 h-16 bg-accent/10 rounded-full blur-2xl pointer-events-none" />
+                )}
+              </div>
+
+              {/* Song info */}
+              <div className={`transition-all duration-500 ${isLyricsOpen ? 'flex-1 min-w-0 text-left md:text-center' : 'text-center max-w-md w-full overflow-hidden px-4'}`}>
+                <MarqueeText 
+                  text={currentSong?.title || 'No song'} 
+                  className={`font-bold text-text-primary transition-all duration-500 ${isLyricsOpen ? 'text-lg md:text-2xl' : 'text-2xl md:text-3xl'}`} 
+                />
+                <MarqueeText 
+                  text={currentSong?.artist || '—'} 
+                  className={`text-text-secondary mt-1 transition-all duration-500 ${isLyricsOpen ? 'text-xs md:text-lg' : 'text-sm md:text-base'}`} 
+                />
+                {!isLyricsOpen && (
+                  <div className={`flex items-center justify-center gap-3 mt-3 transition-all duration-500`}>
+                    {currentSongFull?.bpm && (
+                      <button 
+                        onClick={() => setIsAnalysisOpen(true)}
+                        className="text-xs px-3 py-1 rounded-full bg-surface/80 border border-border/50 hover:bg-accent/20 text-text-muted hover:text-accent transition-all cursor-pointer"
+                        title="View Audio Analysis"
+                      >
+                        {Math.round(currentSongFull.bpm)} BPM
+                      </button>
+                    )}
+                    {moodConfig && (
+                      <button 
+                        onClick={() => setIsAnalysisOpen(true)}
+                        className="text-xs px-3 py-1 rounded-full border hover:bg-accent/20 text-text-muted hover:text-accent transition-all cursor-pointer"
+                        style={{ 
+                          borderColor: `${moodConfig.color}30`,
+                          background: `${moodConfig.color}10`
+                        }}
+                        title="View Audio Analysis"
+                      >
+                        {moodConfig.emoji} {currentSongFull?.mood}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
-              {/* Glow under album art */}
-              {coverUrl && (
-                <div className="absolute -bottom-6 left-8 right-8 h-16 bg-accent/10 rounded-full blur-2xl pointer-events-none" />
-              )}
             </div>
 
-            {/* Song info */}
-            <div className="text-center max-w-md">
-              <h2 className={`font-bold text-text-primary truncate transition-all duration-500 ${isLyricsOpen ? 'text-xl md:text-2xl' : 'text-2xl'}`}>{currentSong?.title || 'No song'}</h2>
-              <p className={`text-text-secondary mt-1 transition-all duration-500 ${isLyricsOpen ? 'text-sm' : 'text-base'}`}>{currentSong?.artist || '—'}</p>
-              <div className={`flex items-center justify-center gap-3 mt-3 transition-all duration-500 ${isLyricsOpen ? 'scale-90 opacity-80' : 'scale-100 opacity-100'}`}>
-                {currentSongFull?.bpm && (
-                  <button 
-                    onClick={() => setIsAnalysisOpen(true)}
-                    className="text-xs px-3 py-1 rounded-full bg-surface/80 border border-border/50 hover:bg-accent/20 text-text-muted hover:text-accent transition-all cursor-pointer"
-                    title="View Audio Analysis"
-                  >
-                    {Math.round(currentSongFull.bpm)} BPM
-                  </button>
-                )}
-                {moodConfig && (
-                  <button 
-                    onClick={() => setIsAnalysisOpen(true)}
-                    className="text-xs px-3 py-1 rounded-full border hover:bg-accent/20 text-text-muted hover:text-accent transition-all cursor-pointer"
-                    style={{ 
-                      borderColor: `${moodConfig.color}30`,
-                      background: `${moodConfig.color}10`
-                    }}
-                    title="View Audio Analysis"
-                  >
-                    {moodConfig.emoji} {currentSongFull?.mood}
-                  </button>
-                )}
+            {/* Mobile Lyrics View (Injected into left side for mobile only) */}
+            {isLyricsOpen && (
+              <div className="flex-1 w-full min-h-0 md:hidden py-2 relative animate-in fade-in duration-500">
+                <div className="w-full h-full overflow-hidden relative flex flex-col">
+                  
+                  <LyricsView
+                    songId={currentSong?.id}
+                    songTitle={currentSong?.title}
+                    songArtist={currentSong?.artist}
+                    lyrics={currentLyrics}
+                    currentTime={currentTime}
+                    onGenerate={handleGenerateLyrics}
+                    isGenerating={isGeneratingLyrics}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Visualizer */}
-            <div className={`w-full max-w-lg transition-all duration-500 ${isLyricsOpen ? 'h-10 opacity-40 scale-y-75' : 'h-20 opacity-70'}`}>
+            <div className={`w-full max-w-lg transition-all duration-500 ${isLyricsOpen ? 'hidden md:block h-10 opacity-40 scale-y-75' : 'h-20 opacity-70'}`}>
               <Visualizer analyser={analyserRef.current} isPlaying={isPlaying} className="w-full h-full" />
             </div>
 
             {/* Controls (Grouped with Song Info) */}
-            <div className="w-full mx-auto flex flex-col items-center gap-6 mt-4 flex-shrink-0">
+            <div className={`w-full mx-auto flex flex-col items-center gap-6 flex-shrink-0 ${isLyricsOpen ? 'mt-auto md:mt-4' : 'mt-4'}`}>
               {/* Progress bar — always visible */}
               <div className="w-full max-w-lg mt-auto">
                 <div
@@ -294,7 +378,7 @@ export default function FullPlayer() {
                   />
                   {/* Thumb */}
                   <div
-                    className="absolute top-1/2 w-4 h-4 rounded-full bg-white opacity-100"
+                    className="absolute top-1/2 w-4 h-4 rounded-full bg-accent opacity-100 pointer-events-none"
                     style={{ left: `${progress}%`, transform: 'translate(-50%, -50%)' }}
                   />
                 </div>
@@ -391,4 +475,3 @@ export default function FullPlayer() {
     </div>
   );
 }
-

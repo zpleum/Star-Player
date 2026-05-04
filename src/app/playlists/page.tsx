@@ -2,7 +2,7 @@
 import { useLibrary } from '@/contexts/LibraryContext';
 import { usePlayer } from '@/contexts/PlayerContext';
 import Link from 'next/link';
-import { ListMusic, Plus, Music2 } from 'lucide-react';
+import { ListMusic, Plus, Music2, MoreHorizontal } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function PlaylistsPage() {
@@ -102,10 +102,10 @@ export default function PlaylistsPage() {
           </div>
 
           {playlists.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-text-muted h-full border-2 border-dashed border-border rounded-3xl">
-              <ListMusic className="w-16 h-16 mb-4 opacity-30" />
-              <p className="text-lg">No playlists yet</p>
-              <p className="text-sm mt-1">Create one to start organizing your music.</p>
+            <div className="flex flex-col items-center justify-center py-20 text-text-muted min-h-[400px] border-2 border-dashed border-border rounded-3xl animate-fade-in">
+              <ListMusic className="w-16 h-16 mb-4 opacity-20" />
+              <p className="text-xl font-bold text-text-primary">No playlists yet</p>
+              <p className="text-sm mt-2 opacity-60">Create one to start organizing your music library.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
@@ -114,7 +114,7 @@ export default function PlaylistsPage() {
                 return (
                   <Link
                     key={pl.id}
-                    href={`/playlists/${pl.id}`}
+                    href={`/playlists/view?id=${pl.id}`}
                     data-playlist-id={pl.id}
                     data-custom-context="true"
                     className="group flex flex-col gap-3"
@@ -126,6 +126,25 @@ export default function PlaylistsPage() {
                       ) : (
                         <Music2 className="w-12 h-12 text-text-muted/50 group-hover:scale-110 transition-transform duration-500" />
                       )}
+                      
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const event = new MouseEvent('contextmenu', {
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: rect.left + (rect.width / 2),
+                            clientY: rect.top + (rect.height / 2)
+                          });
+                          e.currentTarget.dispatchEvent(event);
+                        }}
+                        className="absolute top-2 right-2 z-20 p-2 rounded-full bg-black/40 text-white md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-black/60"
+                        title="More Options"
+                      >
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
                     </div>
                     <div>
                       <h3 className="text-sm font-semibold text-text-primary truncate group-hover:text-accent transition-colors">

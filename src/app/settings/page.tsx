@@ -253,321 +253,257 @@ export default function SettingsPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background overflow-hidden relative">
-      {/* Dynamic Background Mesh Gradient */}
+      {/* Dynamic Background */}
       <div 
-        className="absolute top-0 left-0 w-full h-full pointer-events-none transition-opacity duration-500 ease-in-out"
+        className="absolute top-0 left-0 w-full h-full pointer-events-none transition-opacity duration-500"
         style={{
           opacity: playerState.dynamicBackgroundEnabled ? 0.2 : 0,
           background: `
-            radial-gradient(circle at var(--accent-pos-1-x) var(--accent-pos-1-y), var(--accent) 0%, transparent 50%),
-            radial-gradient(circle at var(--accent-pos-2-x) var(--accent-pos-2-y), var(--accent-2) 0%, transparent 50%),
-            radial-gradient(circle at var(--accent-pos-3-x) var(--accent-pos-3-y), var(--accent-3) 0%, transparent 50%),
-            radial-gradient(circle at var(--accent-pos-4-x) var(--accent-pos-4-y), var(--accent-4) 0%, transparent 50%),
-            radial-gradient(circle at var(--accent-pos-5-x) var(--accent-pos-5-y), var(--accent-5) 0%, transparent 50%)
+            radial-gradient(circle at 20% 20%, var(--accent) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, var(--accent-2) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, var(--accent-3) 0%, transparent 50%)
           `
         }}
       />
 
-      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar relative z-10">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-text-primary mb-2 flex items-center gap-3">
-            <SettingsIcon className="w-8 h-8 text-accent" />
-            Settings
-          </h1>
-          <p className="text-text-secondary">Manage your library storage and audio preferences.</p>
-        </div>
+      {/* Header */}
+      <div className="px-4 md:px-8 pt-5 md:pt-8 pb-4 flex-shrink-0 relative z-10 border-b border-border/30">
+        <h1 className="text-2xl md:text-3xl font-bold text-text-primary flex items-center gap-3">
+          <SettingsIcon className="w-6 h-6 md:w-7 md:h-7 text-accent" />
+          Settings
+        </h1>
+        <p className="text-sm text-text-secondary mt-1">Manage your library, storage, and preferences.</p>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Main Settings Column */}
-          <div 
-            className="lg:col-span-2 flex flex-col"
-            style={{ height: sidebarHeight ? `${sidebarHeight}px` : 'auto' }}
-          >
-            {/* Storage Manager */}
-            <section className="glass-strong rounded-3xl border border-border overflow-hidden flex flex-col h-full">
-              <div className="p-6 border-b border-border flex items-center justify-between bg-surface/30">
-                <h2 className="text-xl font-bold text-text-primary flex items-center gap-2">
-                  <Database className="w-5 h-5 text-accent" />
-                  Storage Manager
-                </h2>
-                <div className="flex items-center gap-2">
-                   <button 
-                    onClick={loadStorageData}
-                    className="p-2 hover:bg-surface rounded-lg transition-colors text-text-muted"
-                    title="Refresh"
-                   >
-                     <RefreshCw className={`w-4 h-4 ${loadingSizes ? 'animate-spin' : ''}`} />
-                   </button>
-                   {selectedSongs.size > 0 && (
-                     <button
-                       onClick={handleBulkDelete}
-                       className="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-all"
-                     >
-                       <Trash2 className="w-3.5 h-3.5" />
-                       Delete ({selectedSongs.size})
-                     </button>
-                   )}
-                </div>
-              </div>
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-36 md:pb-8 custom-scrollbar relative z-10">
+        <div className="max-w-6xl mx-auto space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
 
-              <div className="p-4 border-b border-border flex items-center gap-4 bg-surface/10">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                  <input 
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search files to manage storage..."
-                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-sm focus:outline-none focus:border-accent transition-all"
-                  />
+          {/* ═══ Left/Main: Storage Manager ═══ */}
+          <div className="lg:col-span-2">
+            <section className="bg-surface/30 rounded-2xl border border-border/50 overflow-hidden">
+              {/* Section Header */}
+              <div className="p-4 md:p-6 border-b border-border/30">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg md:text-xl font-bold text-text-primary flex items-center gap-2">
+                      <Database className="w-5 h-5 text-accent" />
+                      Storage Manager
+                    </h2>
+                    <p className="text-xs text-text-secondary mt-0.5">
+                      {songSizes.length} files · {formatBytes(storage.usage)} used
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file'; input.multiple = true; input.accept = 'audio/*';
+                      input.onchange = (e) => {
+                        const files = (e.target as HTMLInputElement).files;
+                        if (files) importFiles(files);
+                      };
+                      input.click();
+                    }}
+                    className="flex items-center gap-1.5 px-3 md:px-5 py-2 bg-accent hover:bg-accent-hover text-accent-foreground rounded-full font-bold transition-all active:scale-95 text-xs md:text-sm whitespace-nowrap"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Import
+                  </button>
                 </div>
-                <button 
-                  onClick={() => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.multiple = true;
-                    input.accept = 'audio/*';
-                    input.onchange = (e) => {
-                      const files = (e.target as HTMLInputElement).files;
-                      if (files) importFiles(files);
-                    };
-                    input.click();
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 text-sm bg-accent/10 text-accent hover:bg-accent/20 rounded-xl transition-all font-bold"
-                >
-                  <RefreshCw className="w-4 h-4 rotate-45" />
-                  Import
-                </button>
-                <button 
-                  onClick={toggleSelectAll}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  {selectedSongs.size === filteredSongSizes.length && filteredSongSizes.length > 0 ? (
-                    <CheckSquare className="w-4 h-4 text-accent" />
-                  ) : (
-                    <Square className="w-4 h-4" />
+
+                {/* Toolbar */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative flex-1 min-w-[160px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+                    <input 
+                      type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search files..."
+                      className="w-full pl-8 pr-3 py-2 bg-surface border border-border rounded-full text-xs focus:outline-none focus:border-accent transition-all"
+                    />
+                  </div>
+                  <button 
+                    onClick={toggleSelectAll}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-full font-medium transition-all text-xs whitespace-nowrap ${
+                      selectedSongs.size === filteredSongSizes.length && filteredSongSizes.length > 0
+                        ? 'bg-accent text-accent-foreground' 
+                        : 'bg-surface border border-border hover:bg-surface-hover text-text-primary'
+                    }`}
+                  >
+                    {selectedSongs.size === filteredSongSizes.length && filteredSongSizes.length > 0 
+                      ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+                    All
+                  </button>
+                  {selectedSongs.size > 0 && (
+                    <button onClick={handleBulkDelete}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-full font-bold transition-all text-xs whitespace-nowrap"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete ({selectedSongs.size})
+                    </button>
                   )}
-                  Select All
-                </button>
+                  <button onClick={loadStorageData} className="p-2 ml-auto text-text-muted hover:text-text-primary hover:bg-surface rounded-full transition-all">
+                    <RefreshCw className={`w-4 h-4 ${loadingSizes ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto no-scrollbar min-h-0">
+              {/* Song List — Card rows (mobile-friendly) */}
+              <div className="divide-y divide-border/30 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 {loadingSizes ? (
                   <div className="p-10 text-center">
-                    <RefreshCw className="w-8 h-8 text-accent animate-spin mx-auto mb-2" />
-                    <p className="text-text-muted">Calculating storage usage...</p>
+                    <RefreshCw className="w-7 h-7 text-accent animate-spin mx-auto mb-2" />
+                    <p className="text-sm text-text-muted">Calculating storage...</p>
                   </div>
                 ) : filteredSongSizes.length > 0 ? (
-                  <table className="w-full text-left table-fixed">
-                    <thead className="sticky top-0 bg-surface z-10">
-                      <tr className="text-[10px] font-bold text-text-muted uppercase tracking-widest border-b border-border">
-                        <th className="px-6 py-3 w-16"></th>
-                        <th className="px-4 py-3">File Name</th>
-                        <th className="px-4 py-3 text-center w-24">Source</th>
-                        <th className="px-4 py-3 text-center w-24">Status</th>
-                        <th className="px-4 py-3 text-right w-24">Size</th>
-                        <th className="px-4 py-3 w-12"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50">
-                      {filteredSongSizes.map((song) => (
-                        <tr 
-                          key={song.id} 
-                          className={`group hover:bg-surface-hover transition-colors cursor-pointer ${selectedSongs.has(song.id) ? 'bg-accent/5' : ''}`}
-                          onClick={() => toggleSelect(song.id)}
-                          onContextMenu={(e) => handleContextMenu(e, song)}
-                        >
-                          <td className="px-6 py-4">
-                            {selectedSongs.has(song.id) ? (
-                              <CheckSquare className="w-4 h-4 text-accent" />
-                            ) : (
-                              <Square className="w-4 h-4 text-text-muted group-hover:text-text-secondary" />
-                            )}
-                          </td>
-                          <td className="px-4 py-4 min-w-0">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-background border border-border overflow-hidden flex items-center justify-center flex-shrink-0">
-                                {coverArts.get(song.id) ? (
-                                  <img src={coverArts.get(song.id)} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <Music2 className="w-4 h-4 text-text-muted" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-text-primary truncate">{song.title}</p>
-                                <p className="text-xs text-text-muted truncate">{song.artist}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            {song.source === 'youtube' ? (
-                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-bold border border-red-500/20">
-                                <Video className="w-2.5 h-2.5" />
-                                YouTube
-                              </div>
-                            ) : (
-                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold border border-blue-500/20">
-                                <Plus className="w-2.5 h-2.5" />
-                                Upload
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            {song.analyzed ? (
-                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
-                                <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-                                Analyzed
-                              </div>
-                            ) : (
-                              <button
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  const result = await analyzeSong(song.id, song.title);
-                                  if (result.success) {
-                                    showToast('success', `Analyzed ${song.title}`);
-                                    loadStorageData();
-                                  } else {
-                                    showErrorPopup(
-                                      `Analysis Failed: ${song.title}`,
-                                      result.error || 'The audio data could not be processed.',
-                                      `Failed: ${song.title}`
-                                    );
-                                  }
-                                }}
-                                disabled={analysisState.status === 'analyzing'}
-                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-accent/10 hover:bg-accent text-accent hover:text-white text-[10px] font-bold border border-accent/20 transition-all disabled:opacity-50"
-                              >
-                                {analysisState.status === 'analyzing' && analysisState.currentSongId === song.id ? (
-                                  <RefreshCw className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <Brain className="w-3 h-3" />
-                                )}
-                                Analyze
-                              </button>
-                            )}
-                          </td>
-                          <td className="px-4 py-4 text-right font-mono text-xs text-text-secondary">
-                            {formatBytes(song.size)}
-                          </td>
-                          <td className="px-4 py-4">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleContextMenu(e, song);
-                              }}
-                              className="p-2 rounded-lg hover:bg-surface text-text-muted opacity-0 group-hover:opacity-100 transition-all"
+                  filteredSongSizes.map((song, index) => (
+                    <div
+                      key={song.id}
+                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-surface-hover ${selectedSongs.has(song.id) ? 'bg-accent/5' : ''}`}
+                      onClick={() => toggleSelect(song.id)}
+                      onContextMenu={(e) => handleContextMenu(e, song)}
+                    >
+                      {/* Row Number */}
+                      <span className="flex-shrink-0 w-6 text-center text-[11px] text-text-muted/50 font-mono tabular-nums select-none">{index + 1}</span>
+
+                      {/* Checkbox */}
+                      <div className="flex-shrink-0">
+                        {selectedSongs.has(song.id)
+                          ? <CheckSquare className="w-4 h-4 text-accent" />
+                          : <Square className="w-4 h-4 text-text-muted" />}
+                      </div>
+
+                      {/* Cover */}
+                      <div className="w-10 h-10 rounded-lg bg-surface border border-border overflow-hidden flex items-center justify-center flex-shrink-0">
+                        {coverArts.get(song.id)
+                          ? <img src={coverArts.get(song.id)} alt="" className="w-full h-full object-cover" />
+                          : <Music2 className="w-4 h-4 text-text-muted" />}
+                      </div>
+
+                      {/* Info */}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-text-primary truncate">{song.title}</p>
+                        <p className="text-xs text-text-muted truncate">{song.artist}</p>
+                        {/* Mobile: badges inline */}
+                        <div className="flex items-center gap-1.5 mt-1 md:hidden">
+                          {song.source === 'youtube' 
+                            ? <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 text-[10px] font-bold border border-red-500/20">YT</span>
+                            : <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px] font-bold border border-blue-500/20">Upload</span>}
+                          {song.analyzed 
+                            ? <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">✓ Analyzed</span>
+                            : null}
+                        </div>
+                      </div>
+
+                      {/* Desktop: badges */}
+                      <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+                        {song.source === 'youtube'
+                          ? <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-bold border border-red-500/20 flex items-center gap-1"><Video className="w-2.5 h-2.5"/>YT</span>
+                          : <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold border border-blue-500/20 flex items-center gap-1"><Plus className="w-2.5 h-2.5"/>Upload</span>}
+                        {song.analyzed 
+                          ? <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">✓ Analyzed</span>
+                          : (
+                            <button onClick={async (e) => {
+                              e.stopPropagation();
+                              const result = await analyzeSong(song.id, song.title);
+                              if (result.success) { showToast('success', `Analyzed ${song.title}`); loadStorageData(); }
+                              else showErrorPopup(`Analysis Failed`, result.error || 'Could not process audio.', song.title);
+                            }}
+                              disabled={analysisState.status === 'analyzing'}
+                              className="px-2 py-0.5 rounded-full bg-accent/10 hover:bg-accent text-accent hover:text-white text-[10px] font-bold border border-accent/20 transition-all disabled:opacity-50 flex items-center gap-1"
                             >
-                              <MoreVertical className="w-4 h-4" />
+                              <Brain className="w-2.5 h-2.5"/>Analyze
                             </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          )}
+                      </div>
+
+                      {/* Size */}
+                      <span className="text-xs text-text-muted font-mono flex-shrink-0">{formatBytes(song.size)}</span>
+
+                      {/* More */}
+                      <button onClick={(e) => { e.stopPropagation(); handleContextMenu(e, song); }}
+                        className="p-1.5 rounded-lg hover:bg-surface text-text-muted transition-all flex-shrink-0"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
                 ) : (
-                  <div className="p-20 text-center text-text-muted">
-                    <HardDrive className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                    <p>No files found matching your search</p>
+                  <div className="p-16 text-center text-text-muted">
+                    <HardDrive className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">No files found</p>
                   </div>
                 )}
               </div>
             </section>
           </div>
 
-          {/* Sidebar Stats & Danger Zone */}
-          <div ref={sidebarRef} className="space-y-8">
-            {/* Storage Summary */}
-            <section className="p-6 glass-strong rounded-3xl border border-border">
-              <h2 className="text-lg font-bold text-text-primary mb-6 flex items-center gap-2">
-                <HardDrive className="w-5 h-5 text-accent" />
+          {/* ═══ Right/Sidebar: Stats & Settings ═══ */}
+          <div ref={sidebarRef} className="space-y-4 md:space-y-6">
+            {/* Storage Usage */}
+            <section className="p-4 md:p-6 bg-surface/30 rounded-2xl border border-border/50">
+              <h2 className="text-base md:text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                <HardDrive className="w-4 h-4 md:w-5 md:h-5 text-accent" />
                 Storage Usage
               </h2>
-              
-              <div className="mb-6">
-                <div className="flex justify-between text-xs mb-2">
-                  <span className="text-text-secondary">Used: {formatBytes(storage.usage)}</span>
+              <div className="mb-4">
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="text-text-secondary">{formatBytes(storage.usage)} used</span>
                   <span className="text-text-muted">{usagePct.toFixed(1)}%</span>
                 </div>
                 <div className="h-2 w-full bg-surface rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 ${usagePct > 90 ? 'bg-red-500' : 'bg-accent'}`}
-                    style={{ width: `${Math.min(100, usagePct)}%` }}
-                  />
+                  <div className={`h-full transition-all duration-500 ${usagePct > 90 ? 'bg-red-500' : 'bg-accent'}`} style={{ width: `${Math.min(100, usagePct)}%` }} />
                 </div>
-                <div className="flex justify-between text-[10px] text-text-muted mt-2">
+                <div className="flex justify-between text-[10px] text-text-muted mt-1.5">
                   <span>Quota: {formatBytes(effectiveQuota)}</span>
-                  {settings?.storageLimit ? (
-                    <span className="text-accent font-bold">Personal Limit</span>
-                  ) : (
-                    <span>Browser Default</span>
-                  )}
+                  {settings?.storageLimit ? <span className="text-accent font-bold">Custom Limit</span> : <span>Browser Default</span>}
                 </div>
               </div>
-
-              <div className="mb-6">
-                <p className="text-xs font-bold text-text-primary mb-3">Set Personal Limit</p>
-                <div className="grid grid-cols-4 gap-2">
+              <div className="mb-4">
+                <p className="text-xs font-bold text-text-primary mb-2">Set Personal Limit</p>
+                <div className="grid grid-cols-4 gap-1.5">
                   {[0, 1, 2, 5].map((val) => (
-                    <button
-                      key={val}
-                      onClick={() => handleUpdateLimit(val)}
-                      className={`py-2 rounded-lg border text-[10px] font-bold transition-all ${
-                        (settings?.storageLimit || 0) === val
-                          ? 'bg-accent border-accent text-white'
-                          : 'bg-surface border-border text-text-muted hover:border-accent/50'
-                      }`}
+                    <button key={val} onClick={() => handleUpdateLimit(val)}
+                      className={`py-2 rounded-lg border text-[10px] font-bold transition-all ${(settings?.storageLimit || 0) === val ? 'bg-accent border-accent text-white' : 'bg-surface border-border text-text-muted hover:border-accent/50'}`}
                     >
                       {val === 0 ? 'Auto' : `${val}GB`}
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-text-muted mt-3 leading-tight">
-                  IndexedDB is browser-managed. This limit is an app-level target.
-                </p>
               </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-surface rounded-xl border border-border">
-                  <span className="text-xs text-text-secondary">Total Songs</span>
-                  <span className="text-sm font-bold text-text-primary">{songs.length}</span>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-3 bg-surface rounded-xl border border-border text-center">
+                  <p className="text-xs text-text-secondary mb-1">Songs</p>
+                  <p className="text-xl font-bold text-text-primary">{songs.length}</p>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-surface rounded-xl border border-border">
-                  <span className="text-xs text-text-secondary">Analyzed</span>
-                  <span className="text-sm font-bold text-emerald-400">{analyzedCount}</span>
+                <div className="p-3 bg-surface rounded-xl border border-border text-center">
+                  <p className="text-xs text-text-secondary mb-1">Analyzed</p>
+                  <p className="text-xl font-bold text-emerald-400">{analyzedCount}</p>
                 </div>
               </div>
             </section>
 
             {/* Personalization */}
-            <section className="p-6 glass-strong rounded-3xl border border-border">
-              <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
-                <SettingsIcon className="w-5 h-5 text-accent" />
+            <section className="p-4 md:p-6 bg-surface/30 rounded-2xl border border-border/50">
+              <h2 className="text-base md:text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                <SettingsIcon className="w-4 h-4 md:w-5 md:h-5 text-accent" />
                 Personalization
               </h2>
-              <div className="flex items-center justify-between p-4 bg-surface rounded-xl border border-border">
+              <div className="flex items-center justify-between p-3 bg-surface rounded-xl border border-border">
                 <div>
-                  <p className="text-sm font-bold text-text-primary">Dynamic Background</p>
-                  <p className="text-[10px] text-text-muted mt-1">Enable multi-color mesh gradients based on cover art.</p>
+                  <p className="text-sm font-semibold text-text-primary">Dynamic Background</p>
+                  <p className="text-[10px] text-text-muted mt-0.5">Mesh gradient from cover art colors.</p>
                 </div>
-                <Checkbox 
-                  checked={playerState.dynamicBackgroundEnabled} 
-                  onChange={toggleDynamicBackground} 
-                />
+                <Checkbox checked={playerState.dynamicBackgroundEnabled} onChange={toggleDynamicBackground} />
               </div>
             </section>
 
-            {/* Audio intelligence */}
-            <section className="p-6 glass-strong rounded-3xl border border-border">
-              <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
-                <Brain className="w-5 h-5 text-accent" />
+            {/* AI Analysis */}
+            <section className="p-4 md:p-6 bg-surface/30 rounded-2xl border border-border/50">
+              <h2 className="text-base md:text-lg font-bold text-text-primary mb-3 flex items-center gap-2">
+                <Brain className="w-4 h-4 md:w-5 md:h-5 text-accent" />
                 AI Analysis
               </h2>
-              <p className="text-xs text-text-muted mb-6 leading-relaxed">
-                Re-scan your library to update BPM, Mood, and Energy features for all songs.
-              </p>
-              <button
-                onClick={analyzeAll}
+              <p className="text-xs text-text-muted mb-4 leading-relaxed">Re-scan library to update BPM, Mood, and Energy for all songs.</p>
+              <button onClick={analyzeAll}
                 className="w-full py-2.5 bg-surface-hover hover:bg-border border border-border rounded-xl text-text-primary transition-colors text-xs font-bold flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -576,16 +512,13 @@ export default function SettingsPage() {
             </section>
 
             {/* Danger Zone */}
-            <section className="p-6 rounded-3xl border border-red-500/20 bg-red-500/5">
-              <h2 className="text-lg font-bold text-red-400 mb-4 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5" />
+            <section className="p-4 md:p-6 rounded-2xl border border-red-500/20 bg-red-500/5">
+              <h2 className="text-base md:text-lg font-bold text-red-400 mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
                 Danger Zone
               </h2>
-              <p className="text-xs text-red-400/70 mb-6 leading-relaxed">
-                Clearing all data will permanently delete your library, playlists, and settings.
-              </p>
-              <button
-                onClick={() => setIsConfirmOpen(true)}
+              <p className="text-xs text-red-400/70 mb-4 leading-relaxed">Permanently delete all library data, playlists, and settings.</p>
+              <button onClick={() => setIsConfirmOpen(true)}
                 className="w-full py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors text-xs font-bold flex items-center justify-center gap-2"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -609,9 +542,8 @@ export default function SettingsPage() {
 
       {/* Context Menu */}
       {contextMenu && (
-        <div 
-          ref={menuRef}
-          className="fixed z-[200] w-52 bg-surface/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden py-1.5 animate-in fade-in zoom-in duration-150"
+        <div ref={menuRef}
+          className="fixed z-[200] w-52 bg-surface/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden py-1.5 shadow-2xl animate-in fade-in zoom-in duration-150"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -619,76 +551,25 @@ export default function SettingsPage() {
             <p className="text-xs font-bold text-text-primary truncate">{contextMenu.song.title}</p>
             <p className="text-[10px] text-text-muted truncate">{contextMenu.song.artist}</p>
           </div>
-
-          <button
-            onClick={() => {
-              const fullSong = songs.find(s => s.id === contextMenu.song.id);
-              if (fullSong) {
-                const index = songs.indexOf(fullSong);
-                playSong(fullSong, songs, index);
-              }
-              setContextMenu(null);
-            }}
-            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-text-primary hover:bg-accent hover:text-white transition-colors"
-          >
-            <Play className="w-4 h-4" />
-            Play Now
+          <button onClick={() => { const s = songs.find(x => x.id === contextMenu.song.id); if (s) playSong(s, songs, songs.indexOf(s)); setContextMenu(null); }}
+            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-text-primary hover:bg-accent hover:text-white transition-colors">
+            <Play className="w-4 h-4" /> Play Now
           </button>
-
-          <button
-            onClick={async () => {
-              await toggleFavorite(contextMenu.song.id);
-              setContextMenu(null);
-            }}
-            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-text-primary hover:bg-accent hover:text-white transition-colors"
-          >
-            <Heart className={`w-4 h-4 ${songs.find(s => s.id === contextMenu.song.id)?.favorite ? 'fill-current' : ''}`} />
-            Favorite
+          <button onClick={async () => { await toggleFavorite(contextMenu.song.id); setContextMenu(null); }}
+            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-text-primary hover:bg-accent hover:text-white transition-colors">
+            <Heart className={`w-4 h-4 ${songs.find(s => s.id === contextMenu.song.id)?.favorite ? 'fill-current' : ''}`} /> Favorite
           </button>
-
-          <button
-            onClick={async () => {
-              const song = contextMenu.song;
-              setContextMenu(null);
-              if (analysisState.status === 'analyzing') return;
-              const result = await analyzeSong(song.id, song.title);
-              if (result.success) {
-                showToast('success', `Analyzed ${song.title}`);
-                loadStorageData();
-              } else {
-                showErrorPopup(
-                  `Analysis Failed: ${song.title}`,
-                  result.error || 'The audio data could not be processed.',
-                  `Failed: ${song.title}`
-                );
-              }
-            }}
-            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-text-primary hover:bg-accent hover:text-white transition-colors"
-          >
-            <Brain className="w-4 h-4" />
-            Analyze AI
+          <button onClick={async () => { const song = contextMenu.song; setContextMenu(null); const r = await analyzeSong(song.id, song.title); if (r.success) { showToast('success', `Analyzed ${song.title}`); loadStorageData(); } else showErrorPopup(`Analysis Failed`, r.error || '', song.title); }}
+            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-text-primary hover:bg-accent hover:text-white transition-colors">
+            <Brain className="w-4 h-4" /> Analyze AI
           </button>
-
           <div className="h-px bg-white/5 my-1" />
-
-          <button
-            onClick={async () => {
-              const id = contextMenu.song.id;
-              setContextMenu(null);
-              if (confirm('Are you sure you want to delete this song?')) {
-                await deleteSong(id);
-                showToast('success', 'Song deleted');
-                loadStorageData();
-              }
-            }}
-            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-500 hover:text-white transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete File
+          <button onClick={async () => { const id = contextMenu.song.id; setContextMenu(null); if (confirm('Delete this song?')) { await deleteSong(id); showToast('success', 'Song deleted'); loadStorageData(); } }}
+            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-500 hover:text-white transition-colors">
+            <Trash2 className="w-4 h-4" /> Delete File
           </button>
         </div>
       )}
-      </div>
     </div>
   );
 }

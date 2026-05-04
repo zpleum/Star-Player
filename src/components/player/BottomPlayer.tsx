@@ -1,6 +1,6 @@
 'use client';
 // ============================================================
-// Star Player — Bottom Player Bar
+// Star Player — Bottom Player Bar (Desktop + Mobile Responsive)
 // ============================================================
 import { usePlayer } from '@/contexts/PlayerContext';
 import { useLibrary } from '@/contexts/LibraryContext';
@@ -30,7 +30,8 @@ export default function BottomPlayer() {
   const { songs, toggleFavorite, getCoverArtUrl } = useLibrary();
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [isEqOpen, setIsEqOpen] = useState(false);
-  const seekBarRef = useRef<HTMLDivElement>(null);
+  const desktopSeekBarRef = useRef<HTMLDivElement>(null);
+  const mobileSeekBarRef = useRef<HTMLDivElement>(null);
   const [isSeeking, setIsSeeking] = useState(false);
 
   const { currentSong, isPlaying, currentTime, duration, volume, isMuted, repeatMode, isShuffled } = state;
@@ -51,21 +52,30 @@ export default function BottomPlayer() {
   const VolumeIcon = isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
   const RepeatIcon = repeatMode === 'one' ? Repeat1 : Repeat;
 
+  // Helper to get clientX for both mouse and touch events
+  const getEventClientX = useCallback((e: MouseEvent | React.MouseEvent | TouchEvent | React.TouchEvent) => {
+    if ('touches' in e && e.touches.length > 0) return e.touches[0].clientX;
+    if ('changedTouches' in e && e.changedTouches.length > 0) return e.changedTouches[0].clientX;
+    return (e as MouseEvent).clientX;
+  }, []);
+
   // Seek bar drag handlers
-  const seekFromEvent = useCallback((e: MouseEvent | React.MouseEvent) => {
-    if (!seekBarRef.current || !duration) return;
-    const rect = seekBarRef.current.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const seekFromEvent = useCallback((e: MouseEvent | React.MouseEvent | TouchEvent | React.TouchEvent, element: HTMLDivElement | null) => {
+    if (!element || !duration) return;
+    const rect = element.getBoundingClientRect();
+    const clientX = getEventClientX(e);
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     seek(pct * duration);
-  }, [duration, seek]);
+  }, [duration, seek, getEventClientX]);
 
-  const handleSeekMouseDown = useCallback((e: React.MouseEvent) => {
+  const handleSeekMouseDown = useCallback((e: React.MouseEvent, type: 'desktop' | 'mobile') => {
+    const element = type === 'desktop' ? desktopSeekBarRef.current : mobileSeekBarRef.current;
     setIsSeeking(true);
-    seekFromEvent(e);
+    seekFromEvent(e, element);
 
-    const handleMouseMove = (ev: MouseEvent) => seekFromEvent(ev);
+    const handleMouseMove = (ev: MouseEvent) => seekFromEvent(ev, element);
     const handleMouseUp = (ev: MouseEvent) => {
-      seekFromEvent(ev);
+      seekFromEvent(ev, element);
       setIsSeeking(false);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
@@ -75,11 +85,35 @@ export default function BottomPlayer() {
     document.addEventListener('mouseup', handleMouseUp);
   }, [seekFromEvent]);
 
+  // Touch seek for mobile
+  const handleSeekTouchStart = useCallback((e: React.TouchEvent, type: 'desktop' | 'mobile') => {
+    const element = type === 'desktop' ? desktopSeekBarRef.current : mobileSeekBarRef.current;
+    setIsSeeking(true);
+    seekFromEvent(e, element);
+
+    const handleTouchMove = (ev: TouchEvent) => { 
+      // Prevent scrolling while seeking
+      if (ev.cancelable) ev.preventDefault(); 
+      seekFromEvent(ev, element); 
+    };
+    const handleTouchEnd = (ev: TouchEvent) => {
+      seekFromEvent(ev, element);
+      setIsSeeking(false);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+  }, [seekFromEvent]);
+
   return (
-    <div className="relative glass-strong border-t border-border/50">
-      {/* Equalizer Popover */}
+    // For mobile: The wrapper itself needs a transparent bottom margin to sit above the tab bar
+    // but the actual player will be a floating pill inside it.
+    <div className="relative z-50 glass-strong border-t border-border/50 md:border-t bg-transparent md:bg-surface/80 border-none md:border-solid">
+      {/* Equalizer Popover (desktop only) */}
       <div 
-        className={`absolute bottom-full right-4 mb-4 z-50 origin-bottom-right transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        className={`absolute bottom-full right-4 mb-4 z-50 origin-bottom-right transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hidden md:block ${
           isEqOpen 
             ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto' 
             : 'opacity-0 translate-y-8 scale-95 pointer-events-none'
@@ -88,11 +122,12 @@ export default function BottomPlayer() {
         <Equalizer onClose={() => setIsEqOpen(false)} />
       </div>
 
-      {/* Progress bar (top of bottom player) — supports click & drag */}
+      {/* Progress bar — supports click, drag, and touch */}
       <div
-        ref={seekBarRef}
-        className="relative h-1.5 bg-border/30 cursor-pointer group hover:h-2.5 transition-all"
-        onMouseDown={handleSeekMouseDown}
+        ref={desktopSeekBarRef}
+        className="relative h-1.5 bg-border/30 cursor-pointer group hover:h-2.5 transition-all hidden md:block"
+        onMouseDown={(e) => handleSeekMouseDown(e, 'desktop')}
+        onTouchStart={(e) => handleSeekTouchStart(e, 'desktop')}
       >
         <div
           className={`absolute inset-y-0 left-0 bg-gradient-to-r from-accent to-accent/60 ${isSeeking ? '' : 'transition-[width] duration-100'}`}
@@ -100,12 +135,13 @@ export default function BottomPlayer() {
         />
         {/* Glow at the tip */}
         <div
-          className="absolute top-1/2 w-3 h-3 rounded-full bg-accent opacity-100 shadow-md ring-2 ring-background/50 pointer-events-none"
+          className="absolute top-1/2 w-3 h-3 rounded-full bg-accent opacity-100 shadow-md pointer-events-none"
           style={{ left: `${progress}%`, transform: `translate(-50%, -50%)` }}
         />
       </div>
 
-      <div className="flex items-center h-[72px] px-4 gap-4">
+      {/* ═══════ Desktop Layout ═══════ */}
+      <div className="hidden md:flex items-center h-[72px] px-4 gap-4">
         {/* Song info */}
         <div className="flex items-center gap-3 w-[280px] min-w-0">
           <div
@@ -227,6 +263,77 @@ export default function BottomPlayer() {
           >
             <ChevronUp className="w-5 h-5" />
           </button>
+        </div>
+      </div>
+
+      {/* ═══════ Mobile Layout (Apple Music Style) ═══════ */}
+      <div className="md:hidden fixed bottom-[calc(50px+env(safe-area-inset-bottom,0px))] left-0 right-0 z-[70] border-t border-white/[0.05] bg-[#1c1c1e]/90 backdrop-blur-[40px] shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+        {/* Mobile Seek Bar — Top of the pill with larger touch target */}
+        <div
+          ref={mobileSeekBarRef}
+          className="relative h-4 -mt-2 flex items-end cursor-pointer group z-20"
+          onMouseDown={(e) => handleSeekMouseDown(e, 'mobile')}
+          onTouchStart={(e) => handleSeekTouchStart(e, 'mobile')}
+        >
+          <div className="w-full h-1 bg-white/10 relative">
+            <div
+              className={`absolute inset-y-0 left-0 bg-gradient-to-r from-accent to-accent/60 ${isSeeking ? '' : 'transition-[width] duration-100'}`}
+              style={{ width: `${progress}%` }}
+            />
+            {/* Thumb for mobile seek */}
+            <div
+              className="absolute top-1/2 w-3 h-3 rounded-full bg-accent opacity-100 shadow-md pointer-events-none"
+              style={{ left: `${progress}%`, transform: `translate(-50%, -50%)` }}
+            />
+          </div>
+        </div>
+
+        <div 
+          className="flex items-center h-[60px] px-4 gap-3 cursor-pointer overflow-hidden relative active:bg-white/5 transition-colors"
+          onClick={() => setFullPlayer(true)}
+        >
+          {/* Cover Art - Larger and more rounded */}
+          <div className="w-11 h-11 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden flex items-center justify-center shadow-[0_4px_12px_rgb(0,0,0,0.4)] z-10 relative">
+            {coverUrl ? (
+              <img src={coverUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <Music2 className="w-6 h-6 text-[#8e8e93]" />
+            )}
+          </div>
+
+          {/* Song Info - Aligned left */}
+          <div className="min-w-0 flex-1 z-10 flex flex-col justify-center">
+            <p className="text-[15px] font-medium text-white truncate max-w-full leading-tight">
+              {currentSong?.title || 'Not Playing'}
+            </p>
+            {currentSong?.artist && (
+              <p className="text-[12px] text-[#8e8e93] truncate leading-tight mt-0.5">
+                {currentSong.artist}
+              </p>
+            )}
+          </div>
+
+          {/* Minimal Controls - Simple white icons */}
+          <div className="flex items-center gap-1 z-10">
+            <button
+              onClick={(e) => { e.stopPropagation(); prev(); }}
+              className="p-2.5 text-white active:opacity-50 active:scale-95 transition-all"
+            >
+              <SkipBack className="w-6 h-6 fill-current" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+              className="p-2.5 text-white active:opacity-50 active:scale-95 transition-all"
+            >
+              {isPlaying ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 fill-current ml-0.5" />}
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); next(); }}
+              className="p-2.5 pr-0 text-white active:opacity-50 active:scale-95 transition-all"
+            >
+              <SkipForward className="w-6 h-6 fill-current" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

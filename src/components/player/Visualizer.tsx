@@ -110,15 +110,10 @@ export default function Visualizer({ analyser, isPlaying, className = '' }: Visu
           if (Math.abs(targetValue - smoothedFreq[i * step]) > 0.5) isAnimating = true;
 
           const value = smoothedFreq[i * step];
-          const barHeight = Math.max((value / 255) * height * 1.5, playing ? 2 : 0);
+          const barHeight = Math.max((value / 255) * height * 1.0, playing ? 2 : 0);
           const y = height - barHeight;
 
-          const gradient = ctx.createLinearGradient(0, y, 0, height);
-          gradient.addColorStop(0, hexToRgba(primaryColor, 0.8));
-          gradient.addColorStop(0.5, hexToRgba(secondaryColor, 0.6));
-          gradient.addColorStop(1, hexToRgba(primaryColor, 0.2));
-
-          ctx.fillStyle = gradient;
+          ctx.fillStyle = hexToRgba(primaryColor, 0.8);
           
           const xRight = centerX + (i * barWidth);
           ctx.fillRect(xRight + 1, y, barWidth - 2, barHeight);
@@ -128,13 +123,8 @@ export default function Visualizer({ analyser, isPlaying, className = '' }: Visu
         }
       } 
       else if (mode === 'wave') {
-        const gradient = ctx.createLinearGradient(0, 0, width, 0);
-        gradient.addColorStop(0, hexToRgba(primaryColor, 0.5));
-        gradient.addColorStop(0.5, secondaryColor);
-        gradient.addColorStop(1, hexToRgba(primaryColor, 0.5));
-
         ctx.lineWidth = 4;
-        ctx.strokeStyle = gradient;
+        ctx.strokeStyle = primaryColor;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -176,10 +166,7 @@ export default function Visualizer({ analyser, isPlaying, className = '' }: Visu
         // Draw central core pulse
         ctx.beginPath();
         ctx.arc(centerX, centerY, innerRadius - 5 + pulse, 0, Math.PI * 2);
-        const coreGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, innerRadius + pulse);
-        coreGradient.addColorStop(0, hexToRgba(primaryColor, 0.4));
-        coreGradient.addColorStop(1, 'transparent');
-        ctx.fillStyle = coreGradient;
+        ctx.fillStyle = hexToRgba(primaryColor, 0.3);
         ctx.fill();
 
         const barCount = 120; // More bars for a smoother look
@@ -204,10 +191,7 @@ export default function Visualizer({ analyser, isPlaying, className = '' }: Visu
           const x2 = centerX + Math.cos(angle) * (innerRadius + pulse + amplitude + 2);
           const y2 = centerY + Math.sin(angle) * (innerRadius + pulse + amplitude + 2);
 
-          const barGradient = ctx.createLinearGradient(x1, y1, x2, y2);
-          barGradient.addColorStop(0, hexToRgba(primaryColor, 0.9));
-          barGradient.addColorStop(0.5, hexToRgba(secondaryColor, 0.7));
-          barGradient.addColorStop(1, hexToRgba(primaryColor, 0.4));
+          ctx.strokeStyle = hexToRgba(primaryColor, 0.9);
 
           ctx.beginPath();
           ctx.moveTo(x1, y1);
@@ -217,7 +201,7 @@ export default function Visualizer({ analyser, isPlaying, className = '' }: Visu
           const baseWidth = 2;
           ctx.lineWidth = baseWidth + (1 - i / barCount) * 2;
           
-          ctx.strokeStyle = barGradient;
+          ctx.strokeStyle = hexToRgba(primaryColor, 0.9);
           ctx.lineCap = 'round';
           
           ctx.stroke();

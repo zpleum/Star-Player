@@ -1,7 +1,7 @@
 import { usePlayer } from '@/contexts/PlayerContext';
 import { useLibrary } from '@/contexts/LibraryContext';
 import { MOOD_CONFIG, type SongMeta, type MoodCategory } from '@/lib/types';
-import { Play, Music2, Heart, GripVertical, ListPlus, Trash2, MoreVertical, Video, Plus, Brain } from 'lucide-react';
+import { Play, Music2, Heart, GripVertical, ListPlus, Trash2, MoreVertical, Video, Plus, Brain, MoreHorizontal } from 'lucide-react';
 import { useAudioAnalysis } from '@/hooks/useAudioAnalysis';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -50,77 +50,38 @@ const SongGridItemUI = React.forwardRef<HTMLDivElement, any>(({
       style={style}
       {...attributes}
       {...(onReorder && !isSelectionMode ? listeners : {})}
-      className={`group relative flex flex-col gap-3 p-4 rounded-2xl bg-surface/50 border border-border/50 transition-all duration-300 ${
-        isDragging && !isOverlay ? 'opacity-30 border-transparent' : 
-        isSelected ? 'bg-accent/20 border-accent/40' : 'hover:bg-surface-hover hover:border-border'
-      } ${isOverlay ? 'bg-surface-hover scale-105 border-accent/50 z-50 ring-1 ring-black/10' : ''} ${
-        onReorder ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
-      }`}
+      className={`group relative flex flex-col gap-2 transition-all duration-300 ${
+        isDragging && !isOverlay ? 'opacity-30' : ''
+      } ${isOverlay ? 'scale-105 z-50' : ''}`}
       onClick={(e) => {
         handlePlay(song, index, e);
       }}
       onContextMenu={(e) => handleContextMenu(e, song)}
     >
-      {/* Selection / Drag handle indicator */}
-      {!isDragging && (
-        <div 
-          className={`absolute top-2 left-2 z-20 flex items-center justify-center transition-all duration-200 ${
-            isSelectionMode 
-              ? 'w-6 h-6 rounded-lg bg-accent' 
-              : 'p-1.5 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 backdrop-blur-sm'
-          }`}
-          onClick={(e) => {
-            if (isSelectionMode) {
-              e.stopPropagation();
-              handlePlay(song, index, e);
-            }
-          }}
-        >
-          {isSelectionMode ? (
-            <div className="w-3 h-3 rounded-sm border border-white flex items-center justify-center bg-white/20">
-              {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-[1px]" />}
-            </div>
-          ) : onReorder ? (
-            <GripVertical className="w-4 h-4 text-white" />
-          ) : null}
-        </div>
-      )}
-
       {/* Cover Art Wrapper */}
-      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-background">
+      <div className={`relative aspect-square w-full rounded-lg overflow-hidden bg-white/5 shadow-md transition-all duration-300 ${
+        isSelected ? 'ring-2 ring-accent ring-offset-2 ring-offset-background' : ''
+      }`}>
         {coverUrl ? (
-          <img src={coverUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 pointer-events-none" />
+          <img src={coverUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 pointer-events-none" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Music2 className="w-10 h-10 text-text-muted/50" />
+            <Music2 className="w-10 h-10 text-text-muted/30" />
           </div>
         )}
         
-        {/* Play Button Overlay */}
-        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${isCurrentSong ? 'opacity-100 bg-black/50' : ''}`}>
-          <div className={`w-12 h-12 rounded-full bg-accent text-white flex items-center justify-center transform translate-y-2 group-hover:translate-y-0 transition-all duration-200 ${isCurrentSong ? 'translate-y-0' : ''}`}>
-            {isPlaying ? (
-              <div className="flex items-end gap-[2px] h-4">
-                <span className="w-[3px] bg-white animate-eq-bar rounded-full" style={{ animationDelay: '0ms' }} />
-                <span className="w-[3px] bg-white animate-eq-bar rounded-full" style={{ animationDelay: '150ms' }} />
-                <span className="w-[3px] bg-white animate-eq-bar rounded-full" style={{ animationDelay: '300ms' }} />
-              </div>
-            ) : (
-              <Play className="w-6 h-6 ml-1 fill-current" />
-            )}
-          </div>
+        {/* Play Button Overlay (Very subtle on mobile, visible on hover/playing) */}
+        <div className={`absolute inset-0 bg-black/20 flex items-center justify-center transition-opacity duration-300 pointer-events-none ${isCurrentSong ? 'opacity-100 bg-black/40' : 'opacity-0 md:group-hover:opacity-100'}`}>
+          {isPlaying ? (
+            <div className="flex items-end gap-[3px] h-5">
+              <span className="w-[4px] bg-white animate-eq-bar rounded-full shadow-sm" style={{ animationDelay: '0ms' }} />
+              <span className="w-[4px] bg-white animate-eq-bar rounded-full shadow-sm" style={{ animationDelay: '150ms' }} />
+              <span className="w-[4px] bg-white animate-eq-bar rounded-full shadow-sm" style={{ animationDelay: '300ms' }} />
+            </div>
+          ) : (
+             <Play className="w-10 h-10 text-white fill-current drop-shadow-lg opacity-80" />
+          )}
         </div>
-
-        {/* Top-Right Favorite Button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleFavorite(song.id);
-          }}
-          className={`absolute top-2 right-2 p-2 rounded-full bg-black/20 hover:bg-black/40 text-white transition-opacity duration-200 backdrop-blur-sm z-10 ${song.favorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-        >
-          <Heart className={`w-4 h-4 ${song.favorite ? 'fill-pink-500 text-pink-500' : ''}`} />
-        </button>
 
         {/* Action Button (Context Menu Trigger) */}
         <button
@@ -128,48 +89,53 @@ const SongGridItemUI = React.forwardRef<HTMLDivElement, any>(({
             e.stopPropagation();
             handleContextMenu(e, song);
           }}
-          className="absolute bottom-2 right-2 p-2 rounded-full bg-black/20 hover:bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 backdrop-blur-sm z-10"
+          className="absolute top-2 right-2 p-2 rounded-full bg-black/40 text-white md:opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-md z-10"
         >
-          <MoreVertical className="w-4 h-4" />
+          <MoreHorizontal className="w-4 h-4" />
         </button>
+
+        {/* Selection Indicator */}
+        {isSelectionMode && (
+          <div className="absolute top-2 left-2 z-20">
+            <div className={`w-6 h-6 rounded-full border transition-all flex items-center justify-center ${
+              isSelected ? 'bg-accent border-accent text-white' : 'bg-black/20 border-white/40 backdrop-blur-md'
+            }`}>
+              {isSelected && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+            </div>
+          </div>
+        )}
+
+        {/* Drag Handle for Grid (visible only when reordering) */}
+        {onReorder && !isSelectionMode && (
+          <div 
+            {...listeners} 
+            {...attributes}
+            className="absolute top-2 left-2 z-20 p-1.5 rounded-full bg-black/40 text-white backdrop-blur-md cursor-grab active:cursor-grabbing"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-4 h-4" />
+          </div>
+        )}
       </div>
 
       {/* Song Info */}
-      <div className="flex flex-col gap-1 min-w-0 px-1 pointer-events-none">
-        <h3 className={`text-base font-bold truncate ${isCurrentSong ? 'text-accent' : 'text-text-primary'}`}>
+      <div className="flex flex-col min-w-0 px-0.5 pointer-events-none">
+        <h3 className={`text-[15px] font-medium truncate leading-tight ${isCurrentSong ? 'text-accent' : 'text-white'}`}>
           {song.title}
         </h3>
-        <p className="text-sm text-text-secondary truncate">
+        <p className="text-[13px] text-[#8e8e93] truncate leading-tight mt-1">
           {song.artist}
         </p>
         
-        {/* Badges row */}
-        <div className="flex items-center gap-2 mt-1">
+        {/* Badges row (Hidden on mobile grid to keep it clean like Apple Music) */}
+        <div className="hidden md:flex items-center gap-2 mt-2">
           {song.bpm && (
-            <span className="text-[10px] font-medium text-text-muted bg-background px-2 py-0.5 rounded-full border border-border">
+            <span className="text-[9px] font-bold text-text-muted bg-background px-1.5 py-0.5 rounded border border-border">
               {song.bpm}
             </span>
           )}
           {moodConfig && (
-            <span 
-              className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border"
-              style={{ 
-                background: `${moodConfig.color}15`, 
-                color: moodConfig.color,
-                borderColor: `${moodConfig.color}30`
-              }}
-            >
-              {moodConfig.emoji} {song.mood}
-            </span>
-          )}
-          {song.source === 'youtube' ? (
-            <span className="text-[10px] font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20 flex items-center gap-1">
-              <Video className="w-2.5 h-2.5" /> YouTube
-            </span>
-          ) : (
-            <span className="text-[10px] font-medium text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20 flex items-center gap-1">
-              <Plus className="w-2.5 h-2.5" /> Upload
-            </span>
+            <span className="text-[10px] opacity-60">{moodConfig.emoji} {song.mood}</span>
           )}
         </div>
       </div>
@@ -314,11 +280,21 @@ export default function SongGrid({ songs, emptyMessage = 'No songs yet', isQueue
     let x = e.clientX;
     let y = e.clientY;
     
-    // Ensure menu stays within window bounds
-    const menuWidth = 208; // w-52 = 13rem = 208px
-    const menuHeight = 300; // rough estimate
-    if (x + menuWidth > window.innerWidth) x -= menuWidth;
-    if (y + menuHeight > window.innerHeight) y -= menuHeight;
+    // Ensure menu stays within window bounds with padding
+    const menuWidth = 220; 
+    const menuHeight = 400; 
+    const padding = 16;
+
+    if (x + menuWidth + padding > window.innerWidth) {
+      x = window.innerWidth - menuWidth - padding;
+    }
+    if (y + menuHeight + padding > window.innerHeight) {
+      y = window.innerHeight - menuHeight - padding;
+    }
+    
+    // Ensure it doesn't go negative
+    x = Math.max(padding, x);
+    y = Math.max(padding, y);
     
     setContextMenu({ x, y, song });
   };
@@ -345,9 +321,10 @@ export default function SongGrid({ songs, emptyMessage = 'No songs yet', isQueue
 
   if (songs.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-text-muted h-full">
-        <Music2 className="w-16 h-16 mb-4 opacity-30" />
-        <p className="text-lg">{emptyMessage}</p>
+      <div className="flex-1 flex flex-col items-center justify-center py-20 px-6 text-text-muted text-center">
+        <Music2 className="w-16 h-16 mb-4 opacity-20" />
+        <p className="text-lg font-medium text-text-primary">{emptyMessage}</p>
+        <p className="text-sm mt-2 opacity-60">Try adding some tracks to get started.</p>
       </div>
     );
   }

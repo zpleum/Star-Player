@@ -23,7 +23,7 @@ export default function SidebarPlaylistItem({ playlist }: SidebarPlaylistItemPro
 
   return (
     <Link
-      href={`/playlists/${playlist.id}`}
+      href={`/playlists/view?id=${playlist.id}`}
       data-playlist-id={playlist.id}
       data-custom-context="true"
       className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-all truncate group"

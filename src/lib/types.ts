@@ -192,7 +192,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   repeatMode: 'off',
   shuffleEnabled: false,
   visualizerMode: 'bars',
-  viewMode: 'list',
+  viewMode: 'grid',
   storageLimit: 0,
   dynamicBackgroundEnabled: true,
 };

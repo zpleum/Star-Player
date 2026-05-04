@@ -98,7 +98,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const [isSelectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isCreatePlaylistModalOpen, setCreatePlaylistModalOpen] = useState(false);
-  const [viewMode, setViewModeState] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewModeState] = useState<'list' | 'grid'>('grid');
   const coverArtCache = useRef(new Map<string, string>()).current;
 
   // Toast system

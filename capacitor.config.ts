@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'me.zpleum',
-  appName: 'star-player',
+  appName: 'Star Player',
   webDir: 'out'
 };
 

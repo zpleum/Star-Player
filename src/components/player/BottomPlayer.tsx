@@ -24,6 +24,57 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 
 import Equalizer from './Equalizer';
 
+// Helper component for scrolling long text
+function MarqueeText({ text, className }: { text: string; className?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+  const [scrollX, setScrollX] = useState(0);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      setTimeout(() => {
+        if (containerRef.current && textRef.current) {
+          const containerWidth = containerRef.current.offsetWidth;
+          const textWidth = textRef.current.scrollWidth;
+          if (textWidth > containerWidth) {
+            setShouldAnimate(true);
+            setScrollX(containerWidth - textWidth - 40); // 40px buffer
+          } else {
+            setShouldAnimate(false);
+          }
+        }
+      }, 100);
+    };
+    
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [text]);
+
+  return (
+    <div 
+      ref={containerRef} 
+      className={`marquee-container w-full overflow-hidden ${className?.includes('text-center') ? 'text-center' : ''}`}
+    >
+      <span
+        ref={textRef}
+        className={`${className} ${shouldAnimate ? 'animate-marquee' : ''}`}
+        style={{
+          display: 'inline-block',
+          width: 'max-content',
+          ...(shouldAnimate ? {
+            '--marquee-end-x': `${scrollX}px`, 
+            '--marquee-duration': `${Math.max(8, Math.abs(scrollX) / 30)}s`,
+          } : {})
+        } as React.CSSProperties}
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
+
 export default function BottomPlayer() {
   const { state, togglePlay, next, prev, seek, setVolume, toggleMute, cycleRepeat, toggleShuffle, setFullPlayer } =
     usePlayer();
@@ -159,12 +210,14 @@ export default function BottomPlayer() {
             </div>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-text-primary truncate">
-              {currentSong?.title || 'No song playing'}
-            </p>
-            <p className="text-xs text-text-muted truncate">
-              {currentSong?.artist || '—'}
-            </p>
+            <MarqueeText 
+              text={currentSong?.title || 'No song playing'} 
+              className="text-sm font-semibold text-text-primary block" 
+            />
+            <MarqueeText 
+              text={currentSong?.artist || '—'} 
+              className="text-xs text-text-muted block" 
+            />
           </div>
         </div>
 
@@ -303,13 +356,15 @@ export default function BottomPlayer() {
 
           {/* Song Info - Aligned left */}
           <div className="min-w-0 flex-1 z-10 flex flex-col justify-center">
-            <p className="text-[15px] font-medium text-white truncate max-w-full leading-tight">
-              {currentSong?.title || 'Not Playing'}
-            </p>
+            <MarqueeText 
+              text={currentSong?.title || 'Not Playing'} 
+              className="text-[15px] font-medium text-white leading-tight block" 
+            />
             {currentSong?.artist && (
-              <p className="text-[12px] text-[#8e8e93] truncate leading-tight mt-0.5">
-                {currentSong.artist}
-              </p>
+              <MarqueeText 
+                text={currentSong.artist} 
+                className="text-[12px] text-[#8e8e93] leading-tight mt-0.5 block" 
+              />
             )}
           </div>
 

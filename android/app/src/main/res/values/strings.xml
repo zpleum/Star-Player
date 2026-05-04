@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">star-player</string>
-    <string name="title_activity_main">star-player</string>
+    <string name="app_name">Star Player</string>
+    <string name="title_activity_main">Star Player</string>
     <string name="package_name">me.zpleum</string>
     <string name="custom_url_scheme">me.zpleum</string>
 </resources>

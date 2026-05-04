@@ -12,6 +12,7 @@ import PlaylistContextMenu from '@/components/ui/PlaylistContextMenu';
 import GlobalErrorModal from '@/components/ui/GlobalErrorModal';
 import AmbientBackground from '@/components/layout/ambient-background';
 import CreatePlaylistModalWrapper from '@/components/library/CreatePlaylistModalWrapper';
+import CapacitorBackButton from '@/components/layout/CapacitorBackButton';
 
 const spaceGrotesk = Space_Grotesk({
   variable: '--font-space-grotesk',
@@ -39,6 +40,7 @@ export default function RootLayout({
           <PlayerProvider>
             <AmbientBackground />
             <CreatePlaylistModalWrapper />
+            <CapacitorBackButton />
             <GlobalContextMenu />
             <PlaylistContextMenu />
             {/* Main App Layout */}

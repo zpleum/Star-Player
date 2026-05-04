@@ -184,7 +184,7 @@ export default function Home() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-20 md:pb-8 custom-scrollbar">
         {songs.length === 0 ? (
           <div className="min-h-[60vh] flex flex-col items-center justify-center max-w-lg mx-auto w-full">
             <ImportSongs />

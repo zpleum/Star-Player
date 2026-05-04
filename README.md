@@ -1,164 +1,50 @@
-<div align="center">
+# 🌟 Star Player
 
-# ⭐ Star Player
+**Star Player** is a high-performance, cross-platform media player application built with Next.js and Capacitor. Integrated with a custom POT Server to handle complex media streaming and bypass limitations with advanced PO Token generation. Designed for a seamless native experience on both Web and Android.
 
-### A modern, offline-first music player built with Next.js
+## 🚀 Key Features
 
-![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
-![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)
-![TailwindCSS](https://img.shields.io/badge/Tailwind-4-06B6D4?style=for-the-badge&logo=tailwindcss)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+- **Cross-platform Support:** Fully functional on both Web and Native Android via Capacitor.
+- **POT Server Integration:** Seamlessly connects with a custom backend (star-player-pot) for stable media streaming and PO Token management.
+- **Modern UI/UX:** A beautiful and responsive interface built with Tailwind CSS.
+- **Optimized Performance:** The release build is refined for small file sizes and high-speed execution on mobile devices.
 
-</div>
+## 🛠 Tech Stack
 
----
+- **Frontend:** [Next.js](https://nextjs.org/) (App Router)
+- **Language:** [TypeScript](https://www.typescriptlang.org/)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **Mobile Bridge:** [Capacitor](https://capacitorjs.com/)
+- **Backend Service:** Node.js (Star Player POT Server)
 
-## ✨ Features
+## 📱 Android Installation
 
-### 🎵 Core Player
-- **Full offline playback** — All songs stored in IndexedDB, works without internet
-- **Gapless playback** with shuffle, repeat (all/one), and queue management
-- **Full-screen player** with album art, visualizer, and synchronized lyrics
-- **5-band equalizer** with customizable presets
-- **Real-time audio visualizer** powered by Web Audio API
+1.  Navigate to the [Releases](https://github.com/zPleum/star-player/releases) page.
+2.  Download the `Star Player.apk` file.
+3.  Install the APK on your Android device (ensure "Install from Unknown Sources" is enabled).
 
-### 🎤 Synchronized Lyrics
-- Auto-fetch lyrics from **LRCLIB API** (free, no API key needed)
-- Karaoke-style synced scrolling with active line highlighting
-- Beautiful fade-in/fade-out edges using CSS masking
-- Lyrics cached in IndexedDB for instant loading
+## 💻 Development Setup
 
-### 🧠 Mood Classification
-- Automatic **mood analysis** (Party, Sad, Focus, Chill, Workout) using rule-based fuzzy scoring
-- BPM detection via Web Audio beat detection
-- Audio feature extraction (spectral centroid, energy, ZCR, spectral flatness)
-- Browse songs by mood with dedicated mood pages
-
-### 📋 Library Management
-- **Drag-and-drop** playlist reordering (list & grid views)
-- Favorites system with quick toggle
-- Context menu with add-to-playlist, delete (with confirmation dialog)
-- Sort and search across your entire library
-
-### 📥 YouTube to MP3
-- Download audio from YouTube URLs directly into your library
-- **Single link** or **batch download** mode
-- Real-time download progress bar with percentage
-- Auto-fetches video thumbnail as cover art
-- Duplicate detection with overwrite confirmation
-
-### 🎨 Premium UI/UX
-- Sleek dark theme with glassmorphism effects
-- Smooth micro-animations and transitions throughout
-- Responsive layout — works on desktop and mobile
-- Custom scrollbars, hover effects, and glow accents
-- Thai font support (LINESeedSansTH)
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Node.js** 18+
-- **npm** or **yarn**
-
-### Installation
+### Initial Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/star-player.git
-cd star-player
-
-# Install dependencies
 npm install
+# or
+yarn install
+```
 
-# Start the development server
+### Run Development Server
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+### Build for Android
 
-### Environment Variables
-
-No environment variables are required. The player works fully offline out of the box.
-
----
-
-## 🏗️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Framework** | Next.js 16 (App Router, Turbopack) |
-| **UI** | React 19, Tailwind CSS 4 |
-| **Language** | TypeScript 5 |
-| **Storage** | IndexedDB via `idb` |
-| **Audio** | Web Audio API, Meyda |
-| **Beat Detection** | `web-audio-beat-detector` |
-| **Drag & Drop** | `@dnd-kit` |
-| **Icons** | Lucide React |
-| **YouTube** | `yt-dlp` via `youtube-dl-exec` |
-
----
-
-## 📁 Project Structure
-
-```
-src/
-├── app/                    # Next.js App Router pages
-│   ├── api/                # API routes (lyrics, youtube)
-│   ├── favorites/          # Favorites page
-│   ├── moods/              # Mood browsing pages
-│   ├── playlists/          # Playlists pages
-│   ├── queue/              # Queue page
-│   ├── settings/           # Settings page
-│   └── youtube/            # YouTube downloader page
-├── components/
-│   ├── layout/             # Sidebar, main layout
-│   ├── library/            # SongList, SongGrid
-│   ├── mood/               # Mood badges, analysis UI
-│   ├── player/             # FullPlayer, BottomPlayer, Visualizer, LyricsView
-│   ├── ui/                 # Toast, SearchBar, ConfirmDialog
-│   └── youtube/            # YouTubeDownloader
-├── contexts/               # PlayerContext, LibraryContext
-├── hooks/                  # useAudioAnalysis
-├── lib/                    # db, types, utils, moodClassifier, audioAnalyzer
-└── fonts/                  # LINESeedSansTH
+```bash
+npm run build
+npx cap sync
+# Then use Android Studio to Generate a Signed APK
 ```
 
----
-
-## 🎹 How It Works
-
-### Audio Pipeline
-1. Songs are imported as audio files or downloaded from YouTube
-2. Audio data is stored as Blobs in IndexedDB
-3. Playback uses the Web Audio API with an `AnalyserNode` for visualization
-4. The 5-band equalizer uses `BiquadFilterNode` chains
-
-### Lyrics System
-1. When a song plays, the app queries LRCLIB by title/artist/duration
-2. Synced lyrics (LRC format) are parsed into timed segments
-3. The active line is determined by comparing `currentTime` against timestamps
-4. Smooth scrolling is achieved via CSS `translateY` transitions
-
-### Mood Classification
-1. Audio features are extracted using Meyda (spectral centroid, RMS energy, ZCR, spectral flatness)
-2. BPM is detected using `web-audio-beat-detector`
-3. A rule-based fuzzy scoring algorithm classifies the mood based on feature ranges
-4. Results are cached in IndexedDB per song
-
----
-
-## 📝 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-**Built with ❤️ and 🎵**
-
-</div>
+Developed with ❤️ by [zPleum](https://github.com/zPleum)

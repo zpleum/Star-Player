@@ -7,6 +7,9 @@ import { usePathname } from 'next/navigation';
 import { MOOD_CONFIG, type SongMeta, type RepeatMode, type MoodCategory, type PlayerState } from '@/lib/types';
 import { shuffleArray } from '@/lib/utils';
 import * as db from '@/lib/db';
+import { Capacitor } from '@capacitor/core';
+import { CapacitorMusicControls } from 'capacitor-music-controls-plugin';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 // ---- Actions ----
 type PlayerAction =
@@ -420,8 +423,107 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           audioRef.current.volume = settings.volume;
         }
       });
+
+      // 3. Persistent Notification Permission Request on Native (Android 13+)
+      if (Capacitor.isNativePlatform()) {
+        const requestNotificationPerms = async () => {
+          try {
+            const perm = await LocalNotifications.checkPermissions();
+            if (perm.display !== 'granted') {
+              // Ask every time on startup if not granted
+              await LocalNotifications.requestPermissions();
+            }
+          } catch (err) {
+            console.error('Initial permission check err:', err);
+          }
+        };
+        requestNotificationPerms();
+      }
     }
   }, []);
+
+  // Centralized Native Music Controls & MediaSession Metadata Sync
+  useEffect(() => {
+    if (!state.currentSong) return;
+
+    const syncControls = async () => {
+      const song = state.currentSong!;
+      
+      // 1. Web MediaSession Metadata
+      if ('mediaSession' in navigator) {
+        let artwork: MediaImage[] = [];
+        const coverArtBlob = await db.getSongCoverArt(song.id);
+        if (coverArtBlob) {
+          const coverUrl = URL.createObjectURL(coverArtBlob);
+          artwork = [{ src: coverUrl, sizes: '512x512', type: coverArtBlob.type }];
+        }
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: song.title,
+          artist: song.artist,
+          album: song.album || '',
+          artwork,
+        });
+      }
+
+      // 2. Native Music Controls
+      if (Capacitor.isNativePlatform()) {
+        try {
+          // Check permissions first
+          const perm = await LocalNotifications.checkPermissions();
+          if (perm.display !== 'granted') {
+            await LocalNotifications.requestPermissions();
+          }
+
+          // Get cover art as Base64 for native
+          let coverUrlForNative = 'https://placehold.co/600x600/000000/444444/png?text=Star+Player';
+          const coverArtBlob = await db.getSongCoverArt(song.id);
+          if (coverArtBlob) {
+            coverUrlForNative = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(coverArtBlob);
+            });
+          }
+
+          // Create/Update controls
+          // Note: The native create method handles destroying the previous instance
+          await CapacitorMusicControls.create({
+            track: song.title,
+            artist: song.artist,
+            album: song.album || '',
+            cover: coverUrlForNative,
+            hasPrev: true,
+            hasNext: true,
+            hasClose: true,
+            dismissable: true,
+            ticker: `Now playing ${song.title}`,
+            isPlaying: state.isPlaying,
+            playIcon: '',
+            pauseIcon: '',
+            prevIcon: '',
+            nextIcon: '',
+            closeIcon: '',
+            notificationIcon: ''
+          });
+        } catch (err) {
+          console.error('Error syncing native music controls:', err);
+        }
+      }
+    };
+
+    syncControls();
+  }, [state.currentSong?.id]);
+
+  // Sync playback state (play/pause) with native music controls
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        CapacitorMusicControls.updateIsPlaying({ isPlaying: state.isPlaying });
+      } catch (err) {
+        console.error('Error updating music controls status:', err);
+      }
+    }
+  }, [state.isPlaying]);
 
   // Save settings when they change
   useEffect(() => {
@@ -469,20 +571,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       // Update play count
       db.incrementPlayCount(song.id);
 
-      // MediaSession API
-      if ('mediaSession' in navigator) {
-        const coverArt = await db.getSongCoverArt(song.id);
+      // MediaSession API & Cover Art
+      if ('mediaSession' in navigator || song.hasCoverArt) {
+        const coverArtBlob = await db.getSongCoverArt(song.id);
         const artwork: MediaImage[] = [];
-        if (coverArt) {
-          const artUrl = URL.createObjectURL(coverArt);
-          artwork.push({ src: artUrl, sizes: '512x512', type: coverArt.type });
+        
+        if (coverArtBlob) {
+          const coverUrlForWeb = URL.createObjectURL(coverArtBlob);
+          artwork.push({ src: coverUrlForWeb, sizes: '512x512', type: coverArtBlob.type });
         }
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: song.title,
-          artist: song.artist,
-          album: song.album,
-          artwork,
-        });
+
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: song.title,
+            artist: song.artist,
+            album: song.album,
+            artwork,
+          });
+        }
       }
 
       // Extract accent color from cover art
@@ -701,7 +807,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'REORDER_QUEUE', payload: { from, to } });
   }, []);
 
-  // 🎲 Random play
+  // Random play
   const playRandomSong = useCallback(
     (songs: SongMeta[]) => {
       if (songs.length === 0) return;
@@ -711,7 +817,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [playSong]
   );
 
-  // 🎭 Random by mood
+  // Random by mood
   const playRandomByMood = useCallback(
     (mood: MoodCategory, songs: SongMeta[]) => {
       const moodSongs = songs.filter((s) => s.mood === mood);
@@ -722,7 +828,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [playSong]
   );
 
-  // 🔀 Shuffle by mood
+  // Shuffle by mood
   const shuffleByMood = useCallback(
     (mood: MoodCategory, songs: SongMeta[]) => {
       const moodSongs = songs.filter((s) => s.mood === mood);
@@ -792,6 +898,72 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     navigator.mediaSession.setActionHandler('previoustrack', prev);
     navigator.mediaSession.setActionHandler('nexttrack', next);
   }, [togglePlay, pause, prev, next]);
+
+  // CapacitorMusicControls Event Listeners & State Sync
+  const controlsHandlersRef = useRef({ next, prev, pause, play: () => { if (audioRef.current) { audioRef.current.play().then(() => dispatch({ type: 'PLAY' })).catch(() => {}); } }, togglePlay });
+
+  useEffect(() => {
+    controlsHandlersRef.current = { next, prev, pause, play: () => { if (audioRef.current) { audioRef.current.play().then(() => dispatch({ type: 'PLAY' })).catch(() => {}); } }, togglePlay };
+  }, [next, prev, pause, togglePlay]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    
+    let listener: any = null;
+
+    const handleAction = (message: string) => {
+      const handlers = controlsHandlersRef.current;
+      if (message === 'music-controls-next') {
+        handlers.next();
+      } else if (message === 'music-controls-previous') {
+        handlers.prev();
+      } else if (message === 'music-controls-pause') {
+        handlers.pause();
+      } else if (message === 'music-controls-play') {
+        handlers.play();
+      } else if (message === 'music-controls-destroy') {
+        handlers.pause();
+      } else if (message === 'music-controls-media-button-play-pause') {
+        handlers.togglePlay();
+      }
+    };
+
+    const setupListener = async () => {
+      try {
+        // iOS / Standard Listener
+        listener = await CapacitorMusicControls.addListener('controlsNotification', (event: any) => {
+          handleAction(event.message);
+        });
+      } catch (err) {
+        console.error('Failed to add listener for CapacitorMusicControls:', err);
+      }
+    };
+
+    // Android 13+ Workaround (Document Event Listener)
+    const handleDocumentEvent = (event: any) => {
+      if (event && event.message) {
+        handleAction(event.message);
+      }
+    };
+    document.addEventListener('controlsNotification', handleDocumentEvent);
+
+    setupListener();
+
+    return () => {
+      if (listener) {
+        listener.remove();
+      }
+      document.removeEventListener('controlsNotification', handleDocumentEvent);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        CapacitorMusicControls.updateIsPlaying({ isPlaying: state.isPlaying });
+      } catch (e) {}
+    }
+  }, [state.isPlaying]);
 
   // Keyboard shortcuts
   useEffect(() => {

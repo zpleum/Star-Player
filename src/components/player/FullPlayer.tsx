@@ -17,6 +17,9 @@ import SongAnalysisDetail from '../mood/SongAnalysisDetail';
 import Visualizer from './Visualizer';
 import LyricsView from './LyricsView';
 
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+
 import * as db from '@/lib/db';
 import type { LyricSegment } from '@/lib/types';
 
@@ -166,6 +169,28 @@ export default function FullPlayer() {
     img.src = coverUrl;
   }, [coverUrl]);
 
+  // Handle Android back button
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const backListener = App.addListener('backButton', (data) => {
+      if (isEqOpen) {
+        setIsEqOpen(false);
+      } else if (isAnalysisOpen) {
+        setIsAnalysisOpen(false);
+      } else if (isLyricsOpen) {
+        setIsLyricsOpen(false);
+      } else {
+        // If nothing is open, we can either close the full player or let the app go back
+        setFullPlayer(false);
+      }
+    });
+
+    return () => {
+      backListener.then(l => l.remove());
+    };
+  }, [isEqOpen, isAnalysisOpen, isLyricsOpen, setFullPlayer]);
+
   const handleGenerateLyrics = async () => {
     if (!currentSong) return;
     setIsGeneratingLyrics(true);
@@ -177,6 +202,55 @@ export default function FullPlayer() {
     } finally {
       setIsGeneratingLyrics(false);
     }
+  };
+
+  // Helper to get clientX for both mouse and touch events
+  const getEventClientX = useCallback((e: MouseEvent | React.MouseEvent | TouchEvent | React.TouchEvent) => {
+    if ('touches' in e && e.touches.length > 0) return e.touches[0].clientX;
+    if ('changedTouches' in e && e.changedTouches.length > 0) return e.changedTouches[0].clientX;
+    return (e as MouseEvent).clientX;
+  }, []);
+
+  // Seek handler for both mouse and touch
+  const seekFromEvent = useCallback((e: MouseEvent | React.MouseEvent | TouchEvent | React.TouchEvent) => {
+    if (!seekBarRef.current || !duration) return;
+    const rect = seekBarRef.current.getBoundingClientRect();
+    const clientX = getEventClientX(e);
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    seek(pct * duration);
+  }, [duration, seek, getEventClientX]);
+
+  const handleSeekMouseDown = (e: React.MouseEvent) => {
+    if (!duration) return;
+    setIsSeeking(true);
+    seekFromEvent(e);
+    const onMove = (ev: MouseEvent) => seekFromEvent(ev);
+    const onUp = (ev: MouseEvent) => {
+      seekFromEvent(ev);
+      setIsSeeking(false);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  const handleSeekTouchStart = (e: React.TouchEvent) => {
+    if (!duration) return;
+    setIsSeeking(true);
+    seekFromEvent(e);
+    const onMove = (ev: TouchEvent) => {
+      if (ev.cancelable) ev.preventDefault();
+      seekFromEvent(ev);
+    };
+    const onEnd = (ev: TouchEvent) => {
+      seekFromEvent(ev);
+      setIsSeeking(false);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+    };
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
   };
 
   if (!isFullPlayerOpen) return null;
@@ -350,26 +424,8 @@ export default function FullPlayer() {
                 <div
                   ref={seekBarRef}
                   className="relative h-2 bg-white/10 rounded-full cursor-pointer group hover:h-3 transition-all"
-                  onMouseDown={(e) => {
-                    if (!duration) return;
-                    setIsSeeking(true);
-                    const doSeek = (ev: MouseEvent | React.MouseEvent) => {
-                      if (!seekBarRef.current) return;
-                      const rect = seekBarRef.current.getBoundingClientRect();
-                      const pct = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
-                      seek(pct * duration);
-                    };
-                    doSeek(e);
-                    const onMove = (ev: MouseEvent) => doSeek(ev);
-                    const onUp = (ev: MouseEvent) => {
-                      doSeek(ev);
-                      setIsSeeking(false);
-                      document.removeEventListener('mousemove', onMove);
-                      document.removeEventListener('mouseup', onUp);
-                    };
-                    document.addEventListener('mousemove', onMove);
-                    document.addEventListener('mouseup', onUp);
-                  }}
+                  onMouseDown={handleSeekMouseDown}
+                  onTouchStart={handleSeekTouchStart}
                 >
                   {/* Filled track */}
                   <div

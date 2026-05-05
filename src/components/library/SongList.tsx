@@ -16,7 +16,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -58,6 +59,8 @@ const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
     <div
       ref={ref}
       style={style}
+      {...attributes}
+      {...(onReorder ? listeners : {})}
       className={`group relative flex md:grid md:grid-cols-[40px_1fr_1fr_80px_80px_80px_40px] gap-3 px-4 py-2 md:py-2.5 items-center md:rounded-lg cursor-pointer transition-all duration-150 ${
         isCurrentSong ? 'bg-accent/10 md:bg-accent/10 text-accent' : 
         isSelected ? 'bg-accent/20 md:bg-accent/20 border-accent/30' : 'active:bg-surface-hover md:hover:bg-surface-hover text-text-primary'
@@ -83,9 +86,7 @@ const SongRowUI = React.forwardRef<HTMLDivElement, any>(({
           </div>
         ) : onReorder ? (
           <div 
-            {...listeners} 
-            {...attributes}
-            className="flex items-center gap-1 cursor-grab active:cursor-grabbing text-text-muted hover:text-accent transition-colors"
+            className="flex items-center gap-1 text-text-muted hover:text-accent transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             <GripVertical className="w-4 h-4" />
@@ -240,9 +241,15 @@ export default function SongList({
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 5,
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
